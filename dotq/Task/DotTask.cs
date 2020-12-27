@@ -14,12 +14,13 @@ namespace dotq.Task
     {
         private readonly TInput _arguments;
         private readonly string _identifier;
+        private TOutput _objectResult;
         public DotTask(TInput arguments)
         {
             _identifier = this.GetType().Namespace + this.GetType().Name;
             _arguments = arguments;
             var registry = TaskRegistry.TaskRegistry.Instance;
-            registry.RegisterTask(this.GetType());
+            registry.RegisterTaskIfNotExists(this.GetType());
         }
 
         public DotTask(object o)
@@ -28,14 +29,19 @@ namespace dotq.Task
             _identifier = this.GetType().Namespace + this.GetType().Name;
             _arguments = arguments;
             var registry = TaskRegistry.TaskRegistry.Instance;
-            registry.RegisterTask(this.GetType());
+            registry.RegisterTaskIfNotExists(this.GetType());
         }
-        
-        public DotTask(){}
+
+        public DotTask() : base()
+        {
+            var registry = TaskRegistry.TaskRegistry.Instance;
+            registry.RegisterTaskIfNotExists(this.GetType());
+        }
         
         public void Execute()
         {
-            Run(_arguments);
+            TOutput res=Run(_arguments);
+            this._objectResult = res;
         }
 
         public Type GetSerializeDto()
@@ -60,7 +66,9 @@ namespace dotq.Task
                 Identifier = _identifier,
                 Arguments = _arguments
             };
-            return JsonSerializer.Serialize(obj);
+            
+            var res= JsonConvert.SerializeObject(obj);
+            return res;
         }
         
         public ITask Deserialize(string s)
@@ -84,12 +92,19 @@ namespace dotq.Task
             if (obj == null) throw new Exception("cannot deserialized the task");
             
             var task = (ITask)Activator.CreateInstance(taskType, obj);
-            
             return task;
         }
         
+        public abstract TOutput Run(TInput args);
 
-        public abstract void Run(TInput args);
+        public TOutput GetResult()
+        {
+            return _objectResult;
+        }
+        public object GetObjectResult()
+        {
+            return (object)_objectResult;
+        }
 
         public class SerializeDto
         {

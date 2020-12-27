@@ -23,9 +23,10 @@ namespace test.Tasks
         {
         }
         
-        public override void Run(Inp args)
+        public override int Run(Inp args)
         {
             Console.WriteLine(args.x*args.y);
+            return 0;
         }
     }
 }

@@ -23,7 +23,7 @@ namespace test.Tasks
         {
         }
     
-        public override void Run(Inp2 args)
+        public override int Run(Inp2 args)
         {
             var concat = "";
             foreach (var arg in args.x)
@@ -31,6 +31,7 @@ namespace test.Tasks
                 concat += arg;
             }
             Console.WriteLine(concat);
+            return 0;
         }
     }
     
