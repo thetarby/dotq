@@ -5,32 +5,58 @@
     <projectFile>test/test.csproj</projectFile>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a9738c1f-a39f-4be5-8fdf-14df32bf5f05" name="Default Changelist" comment="" />
+    <list default="true" id="a9738c1f-a39f-4be5-8fdf-14df32bf5f05" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/contentModel.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/contentModel.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotq/Task/DotTask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/Task/DotTask.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotq/Task/ITask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/Task/ITask.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotq/TaskRegistry/ITaskRegistry.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/TaskRegistry/ITaskRegistry.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dotq/TaskRegistry/TaskRegistry.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/TaskRegistry/TaskRegistry.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/test/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/C80B499D-ADA7-49E0-A8EE-7A9B1744160B/33/7cf447da/Func`2.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/F1EFFA48-407B-4802-97EE-21FEA7CFD3B3/6/ThrowHelper.Serialization.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/C80B499D-ADA7-49E0-A8EE-7A9B1744160B/3A/RuntimeType.CoreCLR.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/C80B499D-ADA7-49E0-A8EE-7A9B1744160B/91/0a83d0da/Func`8.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/C80B499D-ADA7-49E0-A8EE-7A9B1744160B/43/03b75ddc/Func`13.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/C80B499D-ADA7-49E0-A8EE-7A9B1744160B/ad/f5d0d250/Func`1.cs" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="IdeDocumentHistory">
     <changedPaths>
       <option value="$PROJECT_DIR$/dotq/Task/Task.cs" />
-      <option value="$PROJECT_DIR$/dotq/TaskRegistry/ITaskRegistry.cs" />
-      <option value="$PROJECT_DIR$/dotq/TaskRegistry/TaskRegistry.cs" />
-      <option value="$PROJECT_DIR$/dotq/Task/ITask.cs" />
-      <option value="$PROJECT_DIR$/dotq/Task/DotTask.cs" />
-      <option value="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" />
-      <option value="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" />
       <option value="$PROJECT_DIR$/dotq/Storage/IStorage.cs" />
       <option value="$PROJECT_DIR$/dotq/Storage/MemoryStorage.cs" />
-      <option value="$PROJECT_DIR$/test/Program.cs" />
       <option value="$PROJECT_DIR$/.gitignore" />
+      <option value="$PROJECT_DIR$/dotq/Task/ITaskSerializeDto.cs" />
+      <option value="$PROJECT_DIR$/dotq/Task/AbstractSerializeDto.cs" />
+      <option value="$PROJECT_DIR$/dotq/TaskRegistry/ITaskRegistry.cs" />
+      <option value="$PROJECT_DIR$/dotq/TaskRegistry/TaskRegistry.cs" />
+      <option value="$PROJECT_DIR$/dotq/Task/TaskDeserializer.cs" />
+      <option value="$PROJECT_DIR$/dotq/Task/ITaskDeserializer.cs" />
+      <option value="$PROJECT_DIR$/dotq/Task/DefaultTaskDeserializer.cs" />
+      <option value="$PROJECT_DIR$/dotq/TaskResult/ITaskResult.cs" />
+      <option value="$PROJECT_DIR$/test/Program.cs" />
+      <option value="$PROJECT_DIR$/test/Tasks/AddTask.cs" />
+      <option value="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" />
+      <option value="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" />
+      <option value="$PROJECT_DIR$/test/Tasks/SwapTask.cs" />
+      <option value="$PROJECT_DIR$/dotq/Task/ITask.cs" />
+      <option value="$PROJECT_DIR$/dotq/Task/DotTask.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1mCTIQON5ortLYTsQrNN9G6y6AU" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -89,7 +115,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1608996492946</updated>
-      <workItem from="1608996508552" duration="11927000" />
+      <workItem from="1608996508552" duration="22733000" />
     </task>
     <servers />
   </component>
@@ -98,6 +124,17 @@
   </component>
   <component name="UnityProjectConfiguration" hasMinimizedUI="null" />
   <component name="UnityUnitTestConfiguration" currentTestLauncher="NUnit" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
   </component>

@@ -21,12 +21,17 @@
           <e p="MemoryStorage.cs" t="Include" />
         </e>
         <e p="Task" t="Include">
+          <e p="DefaultTaskDeserializer.cs" t="Include" />
           <e p="DotTask.cs" t="Include" />
           <e p="ITask.cs" t="Include" />
+          <e p="ITaskDeserializer.cs" t="Include" />
         </e>
         <e p="TaskRegistry" t="Include">
           <e p="ITaskRegistry.cs" t="Include" />
           <e p="TaskRegistry.cs" t="Include" />
+        </e>
+        <e p="TaskResult" t="Include">
+          <e p="ITaskResult.cs" t="Include" />
         </e>
       </e>
       <e p="dotq.sln" t="IncludeFlat" />
@@ -42,8 +47,10 @@
         </e>
         <e p="Program.cs" t="Include" />
         <e p="Tasks" t="Include">
+          <e p="AddTask.cs" t="Include" />
           <e p="ConcatTask.cs" t="Include" />
           <e p="MultiplyTask.cs" t="Include" />
+          <e p="SwapTask.cs" t="Include" />
         </e>
         <e p="test.csproj" t="IncludeRecursive" />
       </e>
