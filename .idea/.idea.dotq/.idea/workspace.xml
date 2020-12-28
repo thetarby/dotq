@@ -8,13 +8,7 @@
     <list default="true" id="a9738c1f-a39f-4be5-8fdf-14df32bf5f05" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/contentModel.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/contentModel.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.dotq/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dotq/Task/DotTask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/Task/DotTask.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dotq/Task/ITask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/Task/ITask.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dotq/TaskRegistry/ITaskRegistry.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/TaskRegistry/ITaskRegistry.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dotq/TaskRegistry/TaskRegistry.cs" beforeDir="false" afterPath="$PROJECT_DIR$/dotq/TaskRegistry/TaskRegistry.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/test/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" beforeDir="false" afterPath="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,13 +40,14 @@
       <option value="$PROJECT_DIR$/dotq/Task/ITaskDeserializer.cs" />
       <option value="$PROJECT_DIR$/dotq/Task/DefaultTaskDeserializer.cs" />
       <option value="$PROJECT_DIR$/dotq/TaskResult/ITaskResult.cs" />
-      <option value="$PROJECT_DIR$/test/Program.cs" />
       <option value="$PROJECT_DIR$/test/Tasks/AddTask.cs" />
       <option value="$PROJECT_DIR$/test/Tasks/ConcatTask.cs" />
       <option value="$PROJECT_DIR$/test/Tasks/MultiplyTask.cs" />
       <option value="$PROJECT_DIR$/test/Tasks/SwapTask.cs" />
       <option value="$PROJECT_DIR$/dotq/Task/ITask.cs" />
       <option value="$PROJECT_DIR$/dotq/Task/DotTask.cs" />
+      <option value="$PROJECT_DIR$/dotq/Client/LongPollingClient.cs" />
+      <option value="$PROJECT_DIR$/test/Program.cs" />
     </changedPaths>
   </component>
   <component name="ProjectId" id="1mCTIQON5ortLYTsQrNN9G6y6AU" />
@@ -67,6 +62,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="settings.editor.selected.configurable" value="SolutionBuilderGeneralOptionsPageId" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="RunManager" selected=".NET Project.test">
@@ -115,14 +111,15 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1608996492946</updated>
-      <workItem from="1608996508552" duration="22733000" />
+      <workItem from="1608996508552" duration="23495000" />
+      <workItem from="1609099242897" duration="6003000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
-  <component name="UnityProjectConfiguration" hasMinimizedUI="null" />
+  <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
   <component name="UnityUnitTestConfiguration" currentTestLauncher="NUnit" />
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -134,8 +131,28 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DotNet Breakpoints">
+          <url>file://$PROJECT_DIR$/test/Program.cs</url>
+          <line>67</line>
+          <properties documentPath="C:\Users\heymannn\Desktop\components\dotq\dotq\test\Program.cs" initialLine="45" containingFunctionPresentation="method 'Main'">
+            <startOffsets>
+              <option value="2344" />
+            </startOffsets>
+            <endOffsets>
+              <option value="2359" />
+            </endOffsets>
+          </properties>
+          <option name="timeStamp" value="17" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

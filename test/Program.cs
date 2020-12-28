@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Net.Http;
+using System.Threading;
+using dotq.Client;
 using dotq.Storage;
 using dotq.Task;
 using dotq.TaskRegistry;
@@ -13,6 +17,24 @@ namespace test
     {
         static void Main(string[] args)
         {
+
+            var h = new LongPollingClient();
+            var t=h.Get("http://slowwly.robertomurray.co.uk/delay/2900/url/https://jsonplaceholder.typicode.com/todos/1");
+            for (int i = 0; i < 10; i++)
+            {
+                Console.WriteLine(t.Status);
+                Thread.Sleep(500);
+            }
+            Console.WriteLine(t.Result);
+            var t2 = h.GetAsString("http://slowwly.robertomurray.co.uk/delay/2900/url/https://jsonplaceholder.typicode.com/todos/1");
+            for (int i = 0; i < 10; i++)
+            {
+                Console.WriteLine(t2.Status);
+                Thread.Sleep(500);
+            }
+            Console.WriteLine(t2.Result);
+            
+            
             Console.WriteLine("Hello World!");
             var m=new MemoryStorage();
 

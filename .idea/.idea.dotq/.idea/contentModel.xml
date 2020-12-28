@@ -7,6 +7,9 @@
     <e p="C:\Users\heymannn\Desktop\components\dotq\dotq" t="IncludeFlat">
       <e p="dotq" t="IncludeRecursive">
         <e p="bin" t="ExcludeRecursive" />
+        <e p="Client" t="Include">
+          <e p="LongPollingClient.cs" t="Include" />
+        </e>
         <e p="dotq.csproj" t="IncludeRecursive" />
         <e p="obj" t="ExcludeRecursive">
           <e p="Debug" t="Include">
