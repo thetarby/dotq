@@ -8,7 +8,7 @@ namespace dotq.Task
     {
         void Execute();
         
-        Type GetSerializeDto();
+        Type GetTypeofTaskModel();
         
         string GetIdentifier();
 
@@ -17,5 +17,15 @@ namespace dotq.Task
         ITask Deserialize(string s);
 
         object GetObjectResult();
+
+        //this is the time when client creates the task instance
+        DateTime GetCreationTime();
+        
+        //this is the time when worker starts to executing the task
+        DateTime? GetStartingTime();
+        
+        DateTime? GetEndingTime();
+        
+        TimeSpan? GetTimeElapsed();
     }
 }

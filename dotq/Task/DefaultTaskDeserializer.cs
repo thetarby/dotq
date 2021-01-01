@@ -7,22 +7,36 @@ namespace dotq.Task
 {
     public class DefaultTaskDeserializer:ITaskDeserializer
     {
+
+        public string GetTaskIdentifier(string json)
+        {
+            
+            var jObject=JObject.Parse(json);
+            var jToken = jObject["TaskIdentifier"];
+            if (jToken == null)
+                throw new Exception("cannot deserialize task");
+            
+            return Convert.ToString(jToken);
+
+        }
         
         public ITask Deserialize(string s)
         {
-            var jObject = JObject.Parse(s);
-            var identifier = Convert.ToString(jObject["Identifier"]);
+            var identifier = GetTaskIdentifier(s);
             
             var registry = (ITaskRegistry)TaskRegistry.TaskRegistry.Instance;
             
             var taskType=registry.GetTaskByName(identifier);
             var taskInstance = (ITask)Activator.CreateInstance(taskType);
-            var serializeDtoType = taskInstance.GetSerializeDto();
+            var taskModelType = taskInstance?.GetTypeofTaskModel();
 
-            object obj = JsonConvert.DeserializeObject(s, serializeDtoType);
+            if (taskModelType == null) 
+                throw new Exception($"Cannot deserialize task {s}");
             
-            //var obj=JsonSerializer.Deserialize(s);
-            if (obj == null) throw new Exception("cannot deserialized the task");
+            object obj = JsonConvert.DeserializeObject(s, taskModelType);
+            
+            if (obj == null) 
+                throw new Exception($"Cannot deserialize task {s}");
             
             var task = (ITask)Activator.CreateInstance(taskType, obj);
             return task;

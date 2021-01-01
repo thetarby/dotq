@@ -26,8 +26,10 @@
         <e p="Task" t="Include">
           <e p="DefaultTaskDeserializer.cs" t="Include" />
           <e p="DotTask.cs" t="Include" />
+          <e p="ISerializableTask.cs" t="Include" />
           <e p="ITask.cs" t="Include" />
           <e p="ITaskDeserializer.cs" t="Include" />
+          <e p="TaskModel.cs" t="Include" />
         </e>
         <e p="TaskRegistry" t="Include">
           <e p="ITaskRegistry.cs" t="Include" />
@@ -49,6 +51,7 @@
           </e>
         </e>
         <e p="Program.cs" t="Include" />
+        <e p="Pubsub.cs" t="Include" />
         <e p="Tasks" t="Include">
           <e p="AddTask.cs" t="Include" />
           <e p="ConcatTask.cs" t="Include" />

@@ -15,26 +15,28 @@ namespace test
    
     class Program
     {
-        static void Main(string[] args)
+        static void TestClient()
         {
-
             var h = new LongPollingClient();
-            var t=h.Get("http://slowwly.robertomurray.co.uk/delay/2900/url/https://jsonplaceholder.typicode.com/todos/1");
-            for (int i = 0; i < 10; i++)
+            var t=h.Get("http://slowwly.robertomurray.co.uk/delay/1500/url/https://jsonplaceholder.typicode.com/todos/1");
+            for (int i = 0; i < 4; i++)
             {
                 Console.WriteLine(t.Status);
                 Thread.Sleep(500);
             }
             Console.WriteLine(t.Result);
-            var t2 = h.GetAsString("http://slowwly.robertomurray.co.uk/delay/2900/url/https://jsonplaceholder.typicode.com/todos/1");
-            for (int i = 0; i < 10; i++)
+            var t2 = h.GetAsString("http://slowwly.robertomurray.co.uk/delay/1500/url/https://jsonplaceholder.typicode.com/todos/1");
+            for (int i = 0; i < 4; i++)
             {
                 Console.WriteLine(t2.Status);
                 Thread.Sleep(500);
             }
             Console.WriteLine(t2.Result);
-            
-            
+        }
+
+        static void Main(string[] args)
+        {
+
             Console.WriteLine("Hello World!");
             var m=new MemoryStorage();
 
@@ -43,6 +45,8 @@ namespace test
             var add=new AddTask(new (5,6));
             var swap=new SwapTask(new ("abi","naber"));
             var concat=new ConcatTask(new Inp2{x=new List<string>{"f","u","r","k","a","n"}});
+            
+            //TestClient();
             
             m.Enqueue(mult.Serialize());
             m.Enqueue(mult2.Serialize());
@@ -66,6 +70,7 @@ namespace test
                 var task=new DefaultTaskDeserializer().Deserialize(serialized);
                 Console.WriteLine("task is executing...");
                 task.Execute();   
+                Console.WriteLine($"time elapsed: {task.GetTimeElapsed().Value.TotalMilliseconds} ms");
             }
         }
     }
