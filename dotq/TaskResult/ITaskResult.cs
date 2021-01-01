@@ -6,5 +6,7 @@
         TOut GetResult();
 
         string GetRawResult();
+        
+        string Serialize();
     }
 }

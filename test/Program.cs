@@ -8,6 +8,7 @@ using dotq.Client;
 using dotq.Storage;
 using dotq.Task;
 using dotq.TaskRegistry;
+using ServiceStack.Redis;
 using test.Tasks;
 
 namespace test
@@ -53,6 +54,30 @@ namespace test
             m.Enqueue(add.Serialize());
             m.Enqueue(swap.Serialize());
             m.Enqueue(concat.Serialize());
+            
+            // normally these will happen in workers. workers will execute tasks and store their results in 
+            // result store. Client will have an TaskResult handle which will update its content when result is ready.
+            // below res1 will be all client have. This program.cs is only for testing purposes normally workers and
+            // client will be different processes.
+            
+            
+            /* Normally it will look like this;
+             *
+             * For Client:
+             * 
+             * TaskResult mult=new MultiplyTask(new Inp{x=4,y=5}); this will enqueue task, will get the handle from store(or somewhere else)
+             * TaskResult.result == null => will be true until result is executed by some worker
+             *
+             * For workers: each worker will dequeue from TaskStore and push results to ResultStore like;
+             *
+             * ITask task = queue.Dequeue();
+             * task.Execute()
+             * resultStore.SetResultOfTask(task);
+             */
+            
+            var resultStore = new RedisResultStorage(new PooledRedisClientManager());
+            var res1 = resultStore.GetResultOfTaskAsync(mult);
+            
             Console.WriteLine("tasks queued");
 
             
@@ -69,9 +94,12 @@ namespace test
             
                 var task=new DefaultTaskDeserializer().Deserialize(serialized);
                 Console.WriteLine("task is executing...");
-                task.Execute();   
+                task.Execute();
                 Console.WriteLine($"time elapsed: {task.GetTimeElapsed().Value.TotalMilliseconds} ms");
+                resultStore.SetResultOfTask(task);
             }
+
+            var x = "x";
         }
     }
 }

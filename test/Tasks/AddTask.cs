@@ -13,7 +13,7 @@ namespace test.Tasks
         public override int Run((int, int) args)
         {
             Console.WriteLine(args.Item1 + args.Item2);
-            return 0;
+            return args.Item1 + args.Item2;
         }
     }
 }

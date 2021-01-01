@@ -26,7 +26,7 @@ namespace test.Tasks
         public override int Run(Inp args)
         {
             Console.WriteLine(args.x*args.y);
-            return 0;
+            return args.x*args.y;
         }
     }
 }
