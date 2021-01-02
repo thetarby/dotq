@@ -1,4 +1,4 @@
-﻿namespace dotq.TaskResult
+﻿namespace dotq.TaskResultHandle
 {
     public interface ITaskResult<TOut>
     {

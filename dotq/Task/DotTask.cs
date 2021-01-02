@@ -73,11 +73,29 @@ namespace dotq.Task
             return _arguments;
         }
 
-        string ITask.GetIdentifier()
+        public string GetIdentifier()
         {
             return _identifier;
         }
 
+        public string GetInstanceIdentifier()
+        {
+            // creation time might not be unique change it in future.
+            return GetIdentifier() + GetCreationTime();
+        }
+
+        public string SerializeResult()
+        {
+            // TODO: maybe use a model here too to send some fixed meta data to the client about the execution
+            if (_objectResult == null)
+            {
+                throw new Exception("This method cannot be called before executing task");
+            }
+
+            TOutput res = (TOutput) _objectResult;
+            return JsonConvert.SerializeObject(res);
+        }
+        
         public string Serialize()
         {
             var taskModel = ToModel();
@@ -94,12 +112,12 @@ namespace dotq.Task
 
         public TOutput GetResult()
         {
-            return _objectResult;
+            return (TOutput)_objectResult;
         }
         
         public object GetObjectResult()
         {
-            return (object)_objectResult;
+            return _objectResult;
         }
 
         public DateTime GetCreationTime()

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using dotq.Task;
-using dotq.TaskResult;
+using dotq.TaskResultHandle;
 using ServiceStack.Redis;
 
 namespace dotq.Storage
@@ -24,17 +24,18 @@ namespace dotq.Storage
             c.Stop();
         }
         
-        
         public BasicTaskResult GetResultOfTaskAsync(ITask t)
         {
+            var key = t.GetInstanceIdentifier();
+            
             // lock which prevents CloseRedisPubSub thread to close a connection
             // when onmessage handler is called this lock is relased and the thread that calls CloseRedisPubSub will close the connection
             Semaphore luck=new Semaphore(0,1);
-            var result = new BasicTaskResult();
+            var result = new BasicTaskResult(t.GetInstanceIdentifier());
             
             // subscribe to the channel with the name task_id+task_creation_time which is spesific to a task instance
             // creation time might not be unique hence it should be changed
-            var redisPubSub = new RedisPubSubServer(_redisClientsManager, t.GetIdentifier()+t.GetCreationTime())
+            var redisPubSub = new RedisPubSubServer(_redisClientsManager, key)
             {
                 OnMessage = (channel, msg) =>
                 {
@@ -59,9 +60,18 @@ namespace dotq.Storage
         
         public bool SetResultOfTask(ITask t)
         {
+            // TODO: somehow make this reliable because pubsub is not reliable.
+            // I mean pubsub does not guarentee that the published message has reached a subscriber
+            // a possible solution: add this task to a set which holds waitingForAck tasks
             using var redis = _redisClientsManager.GetClient();
-            redis.PublishMessage(t.GetIdentifier()+t.GetCreationTime(), t.GetObjectResult().ToString());
+            redis.PublishMessage(t.GetInstanceIdentifier(), t.GetObjectResult().ToString());
             return true;
+        }
+
+        public void Acknowledge(ITask t)
+        {
+            using var redis = _redisClientsManager.GetClient();
+            //remove this task instance from waitingForAck redis hash
         }
     }
 }
