@@ -37,10 +37,9 @@ namespace test
 
         static void Main(string[] args)
         {
-
+            TestRedisPromise.test1();
             Console.WriteLine("Hello World!");
             var m=new MemoryStorage();
-
             var mult=new MultiplyTask(new Inp{x=4,y=5});
             var mult2=new MultiplyTask(new Inp{x=4,y=56});
             var add=new AddTask(new (5,6));
