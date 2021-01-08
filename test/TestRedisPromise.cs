@@ -13,6 +13,11 @@ namespace test
             var proClient = new RedisPromiseClient(clientsManager);
 
             var promise = proClient.Listen("haha");
+            promise.OnTimeOut = () =>
+            {
+                promise.StartRetryThread();
+            };
+            
             if (promise.Payload != null || promise.IsResolved() == true)
                 throw new Exception();
             

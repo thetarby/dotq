@@ -30,6 +30,65 @@ namespace dotq.Storage
         public static string PendingPromises = "pendingPromises";
     }
     
+    
+    // Simple retry logic which can exponentially increase sleeping time after each retry. Usage;
+    // SimpleRetry.ExponentialDo(() =>{ return DoSomethingThatCanThrowException() }, TimeSpan.FromSeconds(0.1));
+    // wait times will be: 0.1 => 0.2 => 0.4 => 0.8
+    public static class SimpleRetry
+    {
+        public static void Do(
+            Action action,
+            TimeSpan retryInterval,
+            int maxAttemptCount = 3)
+        {
+            Do<object>(() =>
+            {
+                action();
+                return null;
+            }, retryInterval, maxAttemptCount);
+        }
+
+        public static void ExponentialDo(
+            Action action,
+            TimeSpan firstRetrySpan,
+            int maxAttemptCount = 5)
+        {
+            for (int i = 0; i < maxAttemptCount; i++)
+            {
+                Do<object>(() =>
+                {
+                    action();
+                    return null;
+                }, Math.Pow(2, i) * firstRetrySpan, 1);   
+            }
+        }
+
+        public static T Do<T>(
+            Func<T> action,
+            TimeSpan retryInterval,
+            int maxAttemptCount = 3)
+        {
+            var exceptions = new List<Exception>();
+
+            for (int attempted = 0; attempted < maxAttemptCount; attempted++)
+            {
+                try
+                {
+                    if (attempted == 0) // in first attempt dont sleep
+                        return action();
+                    else
+                        Thread.Sleep(retryInterval);
+                }
+                catch (Exception ex)
+                {
+                    exceptions.Add(ex);
+                }
+            }
+            throw new AggregateException(exceptions);
+        }
+    }
+    
+    
     public class Promise
     {
         private bool _isTimedOut=false;
@@ -99,7 +158,24 @@ namespace dotq.Storage
                 return true;
             }
 
-            return false;
+            throw new Exception("Cannot resolve. Probably a server did not resolve the promise yet");
+            //return false;
+        }
+
+
+        public Thread StartRetryThread()
+        {
+            Thread t=new Thread((o =>
+            {
+                // int startingWaitingTime = (int) o;
+                SimpleRetry.ExponentialDo(() =>
+                {
+                    Retry();
+                }, TimeSpan.FromSeconds(0.1));
+            }));
+            
+            t.Start();
+            return t;
         }
     }
     
