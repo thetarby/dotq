@@ -28,8 +28,7 @@ namespace test
 
 
             var server = new RedisPromiseServer(redis);
-            server.Resolve(new PromiseIdChannelIdDto() {ChannelId = proClient.GetId().ToString(), PromiseId = "haha"},
-                "42");
+            server.Resolve(promise.GetPromiseId(), "42");
             for (int i = 0; i < 10; i++)
             {
                 Thread.Sleep(50);
@@ -101,7 +100,8 @@ namespace test
             var server = new RedisPromiseServer(redis);
             for (int i = 0; i < promiseCount; i++)
             {
-                server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString());
+                //server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString()); // or;
+                server.Resolve(promises[i].GetPromiseId(), i.ToString());
             }
 
             Thread.Sleep(100);

@@ -16,8 +16,10 @@ using StackExchange.Redis;
  * 
  * then some other process, which might be a different machine;
  *
- * promiseServer.Resolve("someuniquevalue", "42");
- *
+ * promiseServer.Resolve(promise.GetPromiseId(), "42"); // since resolve server will be a different machine it will not have access to promise instance so promise id should come from somewhere else in real life.
+ *                                                      // (from a request or from pending promises hash in redis) like;
+ *                                                      // promiseServer.Resolve(promiseServer.GetRedisInstance().GetDatabase().HashGetAll(Constants.PendingPromises)[0].Value.ToString(), "42")
+ * 
  * then in the client promise will be resolved;
  * // I am resolved!!! will be written in console
  * p.IsResolved; // true
@@ -98,6 +100,7 @@ namespace dotq.Storage
         private bool _isTimedOut=false;
         private readonly string _id; // result channel must be unique far all active promises
         private readonly ConnectionMultiplexer _redis;
+        private readonly RedisPromiseClient _promiseClient;
         
         public object Payload { get; set; }
         
@@ -112,7 +115,7 @@ namespace dotq.Storage
         {
             OnResolve?.Invoke(Payload);
             var db = _redis.GetDatabase();
-            var success = db.HashDelete(Constants.PendingPromises,_id.ToString());
+            var success = db.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
             if (success == false)
                 throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
             
@@ -134,13 +137,35 @@ namespace dotq.Storage
         }
         
         
+        // creates a promise instance which is connected to a promise client
+        public Promise(RedisPromiseClient promiseClient, string id)
+        {
+            Payload = null;
+            _id = id;
+            _promiseClient = promiseClient;
+            _redis = promiseClient.GetRedisInstance();
+        }
+        
+        
         public bool IsResolved() => Payload != null;
         
         
         public bool IsTimedOut() => _isTimedOut;
         
         
-        public string GetPromiseId() => _id;
+        public bool IsConnected() => _promiseClient!=null;
+
+
+        public string GetPromiseId()
+        {
+            // id of a promise is prefixed with related promise client id to be able to find the correct channel
+            if (IsConnected())
+            {
+                return _promiseClient.GetId().ToString() + ':' + _id;
+            }
+
+            return _id;
+        }
         
         
         // this is called by PromiseClient internally if Promise timeouts
@@ -158,12 +183,12 @@ namespace dotq.Storage
         {
             var db = _redis.GetDatabase();
             var pendingPromises = db.HashGetAll(Constants.PendingPromises).ToDictionary();
-            
+            var key = GetPromiseId();
             
             // for listen2-resolve2 this should always return true hence retry should change when using them
-            if (pendingPromises.ContainsKey(_id))
+            if (pendingPromises.ContainsKey(key))
             {
-                var res=pendingPromises[_id].ToString();
+                var res=pendingPromises[key].ToString();
                 Payload = res;
                 _OnResolveBase();
                 return true;
@@ -209,6 +234,8 @@ namespace dotq.Storage
             _mapper = new Dictionary<string, Promise>();
         }
 
+
+        public ConnectionMultiplexer GetRedisInstance() => _redis;
         
         public Guid GetId() => _guid;
         
@@ -260,7 +287,9 @@ namespace dotq.Storage
         public Promise Listen(string resultChannel)
         {
             var promiseId = resultChannel;
-            var resultPromise = new Promise(_redis, promiseId);
+            
+            // create a connected promise
+            var resultPromise = new Promise(this, promiseId);
             
             _mapper.Add(promiseId, resultPromise);
             
@@ -365,6 +394,28 @@ namespace dotq.Storage
         {
             _redis = redis;
         }
+
+        ConnectionMultiplexer GetRedisInstance() => _redis;
+        
+        public void Resolve(string promiseId, string message)
+        {
+            var x = new int[] {1, 2, 3};
+            try
+            {
+                var split = promiseId.Split(':');
+                Resolve(new PromiseIdChannelIdDto()
+                {
+                    ChannelId = split[0],
+                    PromiseId = split[1]
+                }, message);
+            }
+            catch (IndexOutOfRangeException e)
+            {
+                Console.WriteLine("Error while parsing promiseId. Probably promise was not a connected one. ");
+                throw;
+            }
+        }
+        
         
         public void Resolve(PromiseIdChannelIdDto promiseIdChannelIdDto, string message)
         {
@@ -387,11 +438,13 @@ namespace dotq.Storage
             client.Publish(channelId, JsonSerializer.Serialize(res));
         }
 
+        
         public void ResolveWithoutPublishing(string promiseId, string message)
         {
             IDatabase db = _redis.GetDatabase();
             db.HashSet(Constants.PendingPromises, new[] {new HashEntry(promiseId, message)});
         }
+        
         
         public void Resolve2(string channel, string message)
         {
