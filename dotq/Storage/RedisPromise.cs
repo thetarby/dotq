@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text.Json;
 using System.Threading;
-using ServiceStack.Redis;
 using StackExchange.Redis;
 
 /*
@@ -30,6 +27,7 @@ using StackExchange.Redis;
 
 namespace dotq.Storage
 {
+    
     public static class Constants
     {
         // redis key for the hash which keeps promises
@@ -118,8 +116,16 @@ namespace dotq.Storage
             var success = db.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
             if (success == false)
                 throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
-            
-            //_client.Dispose();
+        }
+        
+        
+        // called by retry. Retry passes db instance so that it is not created twice.
+        public void _OnResolveBase(IDatabase redisDb) 
+        {
+            OnResolve?.Invoke(Payload);
+            var success = redisDb.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
+            if (success == false)
+                throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
         }
         
         
@@ -166,6 +172,27 @@ namespace dotq.Storage
 
             return _id;
         }
+
+
+        public (string, string) ParsePromiseId()
+        {
+            if (!IsConnected())
+                throw new Exception("ParsePromiseId should be called on a connected promise instance");
+            
+            var promiseId = GetPromiseId();
+            var split = promiseId.Split(':');
+
+            if (split.Length != 2)
+                throw new Exception($"Cannot parse promiseId: {promiseId}");
+
+            return (split[0], split[1]);
+        }
+
+
+        public string GetChannelId() => ParsePromiseId().Item1;
+        
+        
+        public string GetInternalPromiseId() => _id; // returns _id which is id of the promise without connected promiseClients' id part.
         
         
         // this is called by PromiseClient internally if Promise timeouts
@@ -190,7 +217,7 @@ namespace dotq.Storage
             {
                 var res=pendingPromises[key].ToString();
                 Payload = res;
-                _OnResolveBase();
+                _OnResolveBase(db);
                 return true;
             }
 
@@ -199,17 +226,17 @@ namespace dotq.Storage
         }
 
         
-        // starts a background thread that call retry with exponentially increasing waiting in between
+        // starts a background thread that calls retry with exponentially increasing waiting in between
         public Thread StartRetryThread()
         {
-            Thread t=new Thread((o =>
+            Thread t=new Thread(o =>
             {
                 // int startingWaitingTime = (int) o;
                 SimpleRetry.ExponentialDo(() =>
                 {
                     Retry();
                 }, TimeSpan.FromSeconds(0.1));
-            }));
+            });
             
             t.Start();
             return t;
@@ -460,12 +487,15 @@ namespace dotq.Storage
 
     }
     
+    
     public class PromiseIdChannelIdDto
     {
         public string PromiseId { get; set; }
             
         public string ChannelId { get; set; }
     }
+    
+    
     public class PromiseIdActualMessageDto
     {
         public string PromiseId { get; set; }
