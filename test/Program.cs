@@ -35,9 +35,8 @@ namespace test
             Console.WriteLine(t2.Result);
         }
 
-        static void Main(string[] args)
+        static void TestGeneral()
         {
-            TestRedisPromise.test1();
             Console.WriteLine("Hello World!");
             var m=new MemoryStorage();
             var mult=new MultiplyTask(new Inp{x=4,y=5});
@@ -99,6 +98,11 @@ namespace test
             }
 
             var x = "x";
+        }
+        static void Main(string[] args)
+        {
+            TestRedisPromise.StressTest();
+            TestRedisPromise.testRetry();
         }
     }
 }

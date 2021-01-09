@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text.Json;
 using System.Threading;
 using ServiceStack.Redis;
+using StackExchange.Redis;
 
 /*
  * example usage:
@@ -92,13 +96,13 @@ namespace dotq.Storage
     public class Promise
     {
         private bool _isTimedOut=false;
-        private readonly string _resultChannel; // result channel must be unique far all active promises
-        private readonly IRedisClient _client;
+        private readonly string _id; // result channel must be unique far all active promises
+        private readonly ConnectionMultiplexer _redis;
         
         public object Payload { get; set; }
         
         
-        public Action OnResolve { get; set; } = null;
+        public Action<object> OnResolve { get; set; } = null;
         
         
         public Action OnTimeOut { get; set; } = null;
@@ -106,11 +110,13 @@ namespace dotq.Storage
         
         public void _OnResolveBase()
         {
-            OnResolve?.Invoke();
-            var pendingPromisesSet = _client.Hashes[Constants.PendingPromises];
-            pendingPromisesSet.Remove(_resultChannel);
+            OnResolve?.Invoke(Payload);
+            var db = _redis.GetDatabase();
+            var success = db.HashDelete(Constants.PendingPromises,_id.ToString());
+            if (success == false)
+                throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
             
-            _client.Dispose();
+            //_client.Dispose();
         }
         
         
@@ -120,11 +126,11 @@ namespace dotq.Storage
         }
         
         
-        public Promise(IRedisClient client, string resultChannel)
+        public Promise(ConnectionMultiplexer redis, string id)
         {
             Payload = null;
-            _resultChannel = resultChannel;
-            _client = client;
+            _id = id;
+            _redis = redis;
         }
         
         
@@ -132,6 +138,9 @@ namespace dotq.Storage
         
         
         public bool IsTimedOut() => _isTimedOut;
+        
+        
+        public string GetPromiseId() => _id;
         
         
         // this is called by PromiseClient internally if Promise timeouts
@@ -142,17 +151,19 @@ namespace dotq.Storage
         }
         
         
-        // forcefully tries to resolve the promise.
+        // forcefully tries to resolve the promise by looking at the list of promises instead of waiting pubsub notification.
         // (It assumes that pubsub somehow failed to publish message and looks for the result in pendingPromises hash.)
         // It returns true if it succeeds to resolve else returns false
         public bool Retry()
         {
-            var pendingPromises = _client.Hashes[Constants.PendingPromises];
+            var db = _redis.GetDatabase();
+            var pendingPromises = db.HashGetAll(Constants.PendingPromises).ToDictionary();
+            
             
             // for listen2-resolve2 this should always return true hence retry should change when using them
-            if (pendingPromises.ContainsKey(_resultChannel))
+            if (pendingPromises.ContainsKey(_id))
             {
-                var res=pendingPromises[_resultChannel];
+                var res=pendingPromises[_id].ToString();
                 Payload = res;
                 _OnResolveBase();
                 return true;
@@ -162,7 +173,8 @@ namespace dotq.Storage
             //return false;
         }
 
-
+        
+        // starts a background thread that call retry with exponentially increasing waiting in between
         public Thread StartRetryThread()
         {
             Thread t=new Thread((o =>
@@ -182,16 +194,27 @@ namespace dotq.Storage
     
     public class RedisPromiseClient
     {
-        private IRedisClientsManager _redisClientsManager;
+        private ConnectionMultiplexer _redis;
+        private ChannelMessageQueue _channelSubscription;
+        private Guid _guid;
+        private Dictionary<string, Promise> _mapper;
+        private int countTime=0;
+        private object mapLock = new object();
 
-        public RedisPromiseClient(IRedisClientsManager redisClientsManager)
+        public RedisPromiseClient(ConnectionMultiplexer  redis)
         {
-            _redisClientsManager = redisClientsManager;
+            _redis = redis;
+            _channelSubscription = null;
+            _guid = Guid.NewGuid();
+            _mapper = new Dictionary<string, Promise>();
         }
 
         
+        public Guid GetId() => _guid;
+        
+        
         private Thread CloseConnectionThread(
-            RedisPubSubServer redisPubSubServer, 
+            ChannelMessageQueue channelSubscription, 
             Semaphore luck, 
             float timeoutInSeconds=-1, 
             Promise promise=null
@@ -201,13 +224,14 @@ namespace dotq.Storage
                 throw new Exception("if timeout is specified a promise should be passed");
             
             Thread thread = new Thread(new ParameterizedThreadStart(CloseConnectionThread));
-            thread.Start((object)(redisPubSubServer,luck, timeoutInSeconds, promise));
+            thread.Start((object)(channelSubscription,luck, timeoutInSeconds, promise));
             return thread;
         }
         
+        
         private void CloseConnectionThread(object o)
         {
-            var args = ((RedisPubSubServer, Semaphore, float, Promise)) o;
+            var args = ((ChannelMessageQueue, Semaphore, float, Promise)) o;
             var promiseTimeoutInSeconds = args.Item3;
             var promise = args.Item4;
             
@@ -223,8 +247,9 @@ namespace dotq.Storage
                 l.WaitOne((int)(promiseTimeoutInSeconds * 1000));
                 promise.TimedOut();
             }
-            c.Stop();
-            c.Dispose();
+            
+            Console.WriteLine("ALL PROMISES RESOLVED UNSUBSCRIBING...");
+            c.Unsubscribe();
         }
         
         
@@ -234,33 +259,64 @@ namespace dotq.Storage
          */
         public Promise Listen(string resultChannel)
         {
-            var client = _redisClientsManager.GetClient();
-            var resultPromise = new Promise(client, resultChannel);
+            var promiseId = resultChannel;
+            var resultPromise = new Promise(_redis, promiseId);
             
-            // lock which prevents CloseRedisPubSub thread to close a connection
-            // when onmessage handler is called this lock is released and the thread that calls
-            // CloseRedisPubSub will close the connection
-            Semaphore luck = new Semaphore(0,1);
+            _mapper.Add(promiseId, resultPromise);
             
-            // subscribe to the channel with the name task_id+task_creation_time which is spesific to a task instance
-            // creation time might not be unique hence it should be changed
-            var redisPubSub = new RedisPubSubServer(_redisClientsManager, resultChannel)
-            {
-                OnMessage = (channel, msg) =>
-                {
-                    resultPromise.Payload = msg;
-                    resultPromise._OnResolveBase();
-                    luck.Release();
-                },
-            };
-        
-            CloseConnectionThread(redisPubSub, luck); // this starts thread
-            redisPubSub.Start();
+            var redisPubSub = GetPubSubServer();
 
             return resultPromise;
         }
 
+        
+        //sequential
+        // sets up a pubsub subscription for this instance. When called many times returns same subscription like a singleton. But unlike singleton it can dispose subscription after no one is using it
+        // hence it should be called before creating any promise otherwise there may not be any thread listening for promise resolving messages.
+        ChannelMessageQueue GetPubSubServer() 
+        {
+            lock (this)
+            {
+                if (this._channelSubscription == null)
+                {
+                    Semaphore luck = new Semaphore(0,1);
 
+                    var channelSubscription = _redis.GetSubscriber().Subscribe(_guid.ToString());
+                    channelSubscription.OnMessage((message =>
+                    {
+                        countTime++;
+                        lock (mapLock)
+                        {
+                            var promiseIdActualMessageDto = JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.Message.ToString());
+                            var promiseId = promiseIdActualMessageDto.PromiseId;
+                            var realmsg = promiseIdActualMessageDto.ActualMessage;
+                            
+                            if (_mapper.ContainsKey(promiseId))
+                            {
+                                var promise = _mapper[promiseId];
+                                _mapper.Remove(promiseId);
+                                promise.Payload = realmsg;
+                                promise._OnResolveBase();
+                                if (_mapper.Count == 0)
+                                {
+                                    luck.Release();
+                                } 
+                            }
+                        }
+                    }));
+                    
+                    CloseConnectionThread(channelSubscription, luck); // this starts thread
+                    Thread.Sleep(1000); //give some time to establish subscription
+                    
+                    _channelSubscription = channelSubscription;
+                    return channelSubscription;
+                }
+                
+                return _channelSubscription;   
+            }
+        }
+        
+        
         /*
          * a different implementation;
          * 1 first adds a promise with empty message to pending promises.
@@ -270,7 +326,8 @@ namespace dotq.Storage
          */
         public Promise Listen2(string resultChannel)
         {
-            var client = _redisClientsManager.GetClient();
+            
+            /*var client = _redisClientsManager.GetClient();
             var pendingPromises = client.Hashes[Constants.PendingPromises];
             var success= pendingPromises.AddIfNotExists(new KeyValuePair<string, string>(resultChannel, ""));
 
@@ -288,43 +345,78 @@ namespace dotq.Storage
                     resultPromise._OnResolveBase();
                     luck.Release();
                 },
+                OnError = (exception => Console.WriteLine($"EXCEPTION....................... {exception}"))
             };
         
             CloseConnectionThread(redisPubSub, luck).Start();
             redisPubSub.Start();
 
-            return resultPromise;
+            return resultPromise;*/
+            throw  new NotImplementedException();
         }
     }
 
     
     public class RedisPromiseServer
     {
-        private IRedisClientsManager _redisClientsManager;
+        private ConnectionMultiplexer _redis;
 
-        public RedisPromiseServer(IRedisClientsManager redisClientsManager)
+        public RedisPromiseServer(ConnectionMultiplexer redis)
         {
-            _redisClientsManager = redisClientsManager;
+            _redis = redis;
         }
-
-        public void Resolve(string channel, string message)
+        
+        public void Resolve(PromiseIdChannelIdDto promiseIdChannelIdDto, string message)
         {
-            using var client = _redisClientsManager.GetClient();
+            var client = _redis.GetSubscriber();
+            
+            var promiseId = promiseIdChannelIdDto.PromiseId;
+            var channelId = promiseIdChannelIdDto.ChannelId;
             
             // put message to a hash also in case consumer cannot receive the published message(due to timeout maybe?)
             // in that case client can retry to get the message from pendingPromises
-            client.Hashes[Constants.PendingPromises].Add(channel, message);
-            client.PublishMessage(channel, message);
+            IDatabase db = _redis.GetDatabase();
+            db.HashSet(Constants.PendingPromises, new[] {new HashEntry(promiseId, message)});
+            
+            var res = new PromiseIdActualMessageDto()
+            {
+                PromiseId = promiseId,
+                ActualMessage = message
+            };
+            
+            client.Publish(channelId, JsonSerializer.Serialize(res));
+        }
+
+        public void ResolveWithoutPublishing(string promiseId, string message)
+        {
+            IDatabase db = _redis.GetDatabase();
+            db.HashSet(Constants.PendingPromises, new[] {new HashEntry(promiseId, message)});
         }
         
         public void Resolve2(string channel, string message)
         {
-            using var client = _redisClientsManager.GetClient();
-            
-            // put message to a hash also in case consumer cannot receive the published message(due to timeout maybe?)
-            // in that case client can retry to get the message from pendingPromises
-            client.Hashes[Constants.PendingPromises][channel] = message;
-            client.PublishMessage(channel, message);
+            // using var client = _redis.GetClient();
+            //
+            // // put message to a hash also in case consumer cannot receive the published message(due to timeout maybe?)
+            // // in that case client can retry to get the message from pendingPromises
+            // client.Hashes[Constants.PendingPromises][channel] = message;
+            // client.PublishMessage(channel, message);
+
+            throw new NotImplementedException();
         }
+
+    }
+    
+    public class PromiseIdChannelIdDto
+    {
+        public string PromiseId { get; set; }
+            
+        public string ChannelId { get; set; }
+    }
+    public class PromiseIdActualMessageDto
+    {
+        public string PromiseId { get; set; }
+            
+        public string ActualMessage { get; set; }
     }
 }

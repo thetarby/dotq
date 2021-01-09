@@ -11,6 +11,7 @@
 
     <ItemGroup>
       <PackageReference Include="ServiceStack.Redis" Version="5.10.2" />
+      <PackageReference Include="StackExchange.Redis" Version="2.2.4" />
     </ItemGroup>
 
 </Project>
