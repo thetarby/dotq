@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using StackExchange.Redis;
@@ -23,7 +24,8 @@ using StackExchange.Redis;
  * (string)p.Payload; // "42"
  */
 
-// TODOS: an exponential default retry policy for timeout promises 
+// TODOS: * Make sure promise ids are unique in the process (with a static class variable maybe?)
+//        * Singleton promiseClient
 
 namespace dotq.Storage
 {
@@ -114,8 +116,11 @@ namespace dotq.Storage
             OnResolve?.Invoke(Payload);
             var db = _redis.GetDatabase();
             var success = db.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
-            if (success == false)
-                throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
+            
+            // TODO: this exception somehow goes silent and prevents background thread to close connection.
+            // also for now this is not necessary
+            //if (success == false)
+            //    throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
         }
         
         
@@ -124,8 +129,8 @@ namespace dotq.Storage
         {
             OnResolve?.Invoke(Payload);
             var success = redisDb.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
-            if (success == false)
-                throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
+            //if (success == false)
+            //    throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
         }
         
         
@@ -135,19 +140,19 @@ namespace dotq.Storage
         }
         
         
-        public Promise(ConnectionMultiplexer redis, string id)
+        public Promise(ConnectionMultiplexer redis, string id=null)
         {
             Payload = null;
-            _id = id;
+            _id = id ?? Guid.NewGuid().ToString();
             _redis = redis;
         }
         
         
         // creates a promise instance which is connected to a promise client
-        public Promise(RedisPromiseClient promiseClient, string id)
+        public Promise(RedisPromiseClient promiseClient, string id=null)
         {
             Payload = null;
-            _id = id;
+            _id = id ?? Guid.NewGuid().ToString();
             _promiseClient = promiseClient;
             _redis = promiseClient.GetRedisInstance();
         }
@@ -252,7 +257,8 @@ namespace dotq.Storage
         private Dictionary<string, Promise> _mapper;
         private int countTime=0;
         private object mapLock = new object();
-
+        private Semaphore canContinue = new Semaphore(0, 1);
+        
         public RedisPromiseClient(ConnectionMultiplexer  redis)
         {
             _redis = redis;
@@ -298,12 +304,15 @@ namespace dotq.Storage
             }
             else
             {
+                // TODO: this does not work now. It was working for per promise connections
                 l.WaitOne((int)(promiseTimeoutInSeconds * 1000));
                 promise.TimedOut();
             }
             
             Console.WriteLine("ALL PROMISES RESOLVED UNSUBSCRIBING...");
             c.Unsubscribe();
+            _channelSubscription = null;
+            canContinue.Release();
         }
         
         
@@ -319,7 +328,7 @@ namespace dotq.Storage
             var resultPromise = new Promise(this, promiseId);
             
             _mapper.Add(promiseId, resultPromise);
-            
+
             var redisPubSub = GetPubSubServer();
 
             return resultPromise;
@@ -331,7 +340,7 @@ namespace dotq.Storage
         // hence it should be called before creating any promise otherwise there may not be any thread listening for promise resolving messages.
         ChannelMessageQueue GetPubSubServer() 
         {
-            lock (this)
+            lock (mapLock)
             {
                 if (this._channelSubscription == null)
                 {
@@ -356,6 +365,8 @@ namespace dotq.Storage
                                 if (_mapper.Count == 0)
                                 {
                                     luck.Release();
+                                    // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
+                                    canContinue.WaitOne();
                                 } 
                             }
                         }
@@ -412,6 +423,28 @@ namespace dotq.Storage
         }
     }
 
+
+    // A factory-like class which returns same instance of promiseClient as long as passed redis instance is the same 
+    public class RedisPromiseClientFactory
+    {
+        private static readonly object lck = new object();  
+        private static List<RedisPromiseClient> _instances = new List<RedisPromiseClient>();  
+        public static RedisPromiseClient GetInstance(ConnectionMultiplexer redis)  
+        {
+            lock (lck)  
+            {
+                if (_instances.Exists((client => client.GetRedisInstance() == redis)))
+                {
+                    return _instances.First(d => d.GetRedisInstance()==redis);
+                }
+                
+                var client = new RedisPromiseClient(redis);
+                _instances.Add(client);
+                return client;  
+            }
+        }
+    }
+    
     
     public class RedisPromiseServer
     {
