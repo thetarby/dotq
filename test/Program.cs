@@ -9,6 +9,7 @@ using dotq.Storage;
 using dotq.Task;
 using dotq.TaskRegistry;
 using ServiceStack.Redis;
+using StackExchange.Redis;
 using test.Tasks;
 
 namespace test
@@ -35,7 +36,7 @@ namespace test
             Console.WriteLine(t2.Result);
         }
 
-        static void TestGeneral()
+        static void TestTaskExecuting()
         {
             Console.WriteLine("Hello World!");
             var m=new MemoryStorage();
@@ -72,9 +73,7 @@ namespace test
              * task.Execute()
              * resultStore.SetResultOfTask(task);
              */
-            
-            var resultStore = new RedisResultStorage(new PooledRedisClientManager());
-            var res1 = resultStore.GetResultOfTaskAsync(mult);
+
             
             Console.WriteLine("tasks queued");
 
@@ -94,15 +93,17 @@ namespace test
                 Console.WriteLine("task is executing...");
                 task.Execute();
                 Console.WriteLine($"time elapsed: {task.GetTimeElapsed().Value.TotalMilliseconds} ms");
-                resultStore.SetResultOfTask(task);
             }
 
             var x = "x";
         }
+        
         static void Main(string[] args)
         {
             TestRedisPromise.StressTest();
-            TestRedisPromise.testRetry();
+            //TestRedisPromise.testRetry();
+            TestTaskExecuting();
+            TestTaskResultHandle.ParallelTest();
         }
     }
 }

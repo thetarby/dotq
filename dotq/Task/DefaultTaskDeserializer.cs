@@ -20,8 +20,24 @@ namespace dotq.Task
 
         }
         
+        // since a dottask should give same result when GetInstanceIdentifier is called after deserialization,
+        // json string should include TaskInstanceIdentifier field (Otherwise GetInstanceIdentifier creates a new guid and gives a different result)
+        public bool IsValid(string json)
+        {
+            
+            var jObject=JObject.Parse(json);
+            var jToken = jObject["TaskInstanceIdentifier"];
+            if (jToken == null)
+                return false;
+            return true;
+
+        }
+        
         public ITask Deserialize(string s)
         {
+            if (!IsValid(s))
+                throw new Exception("Task cannot be deserialized since it does not have taskInstanceIdentifier field");
+            
             var identifier = GetTaskIdentifier(s);
             
             var registry = (ITaskRegistry)TaskRegistry.TaskRegistry.Instance;

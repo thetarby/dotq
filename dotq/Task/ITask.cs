@@ -10,6 +10,8 @@ namespace dotq.Task
         
         Type GetTypeofTaskModel();
         
+        Type GetTypeofOutput();
+        
         string GetIdentifier();
 
         // GetIdentifier creates a unique id for the task type which means all instances of a dottask have the same id
@@ -21,6 +23,8 @@ namespace dotq.Task
         string Serialize();
 
         string SerializeResult();
+        
+        object DeserializeResultToObject(string s);
         
         ITask Deserialize(string s);
 

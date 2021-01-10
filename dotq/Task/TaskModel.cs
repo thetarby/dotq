@@ -9,9 +9,13 @@ namespace dotq.Task
     public class TaskModel<TArgs>
     {
         public string TaskIdentifier { get; set; }
+        
+        public string TaskInstanceIdentifier { get; set; }
+        
         public TArgs Args { get; set; }
 
         public DateTime CreationTime { get; set; }
+        
         public Dictionary<string, string> Options { get; set; }
     }
 }
