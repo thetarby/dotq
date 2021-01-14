@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "dotq", "dotq\dotq.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test.csproj", "{3620A244-C728-46E8-8F62-94C8DE0D11E1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{F97748C9-B490-4EB2-9ACE-C7B626BA7F0B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{3620A244-C728-46E8-8F62-94C8DE0D11E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3620A244-C728-46E8-8F62-94C8DE0D11E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3620A244-C728-46E8-8F62-94C8DE0D11E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F97748C9-B490-4EB2-9ACE-C7B626BA7F0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F97748C9-B490-4EB2-9ACE-C7B626BA7F0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F97748C9-B490-4EB2-9ACE-C7B626BA7F0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F97748C9-B490-4EB2-9ACE-C7B626BA7F0B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

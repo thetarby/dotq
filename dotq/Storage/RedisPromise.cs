@@ -167,6 +167,17 @@ namespace dotq.Storage
         public bool IsConnected() => _promiseClient!=null;
 
 
+        public bool IsListening()
+        {
+            if (IsConnected())
+            {
+                _promiseClient.IsPromiseInMapper(this);
+            }
+
+            return false;
+        }
+
+
         public string GetPromiseId()
         {
             // id of a promise is prefixed with related promise client id to be able to find the correct channel
@@ -270,7 +281,12 @@ namespace dotq.Storage
 
         public ConnectionMultiplexer GetRedisInstance() => _redis;
         
+        
         public Guid GetId() => _guid;
+        
+        
+        // checks if given promise is in mapper of this client. Meaning it is listening to a pubsub channel can ready to be resolved by a promiseResolver server.
+        public bool IsPromiseInMapper(Promise p) => _mapper.ContainsKey(p.GetInternalPromiseId());
         
         
         private Thread CloseConnectionThread(
@@ -334,6 +350,17 @@ namespace dotq.Storage
             return resultPromise;
         }
 
+        
+        public Promise CreatePromise() => new Promise(this, Guid.NewGuid().ToString());
+
+
+        public Promise Listen(Promise promise)
+        {
+            _mapper.Add(promise.GetInternalPromiseId(), promise);
+            GetPubSubServer();
+            return promise;
+        }
+        
         
         //sequential
         // sets up a pubsub subscription for this instance. When called many times returns same subscription like a singleton. But unlike singleton it can dispose subscription after no one is using it

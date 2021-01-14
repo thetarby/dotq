@@ -46,8 +46,8 @@ namespace dotq.TaskResultHandle
         
         public PromiseTaskResultHandle(ITask task, Promise promise, Action<object> onResolve)
         {
-            // check if promise is correctly configured with the task. Promise's internal id should be task id
-            if (promise.GetInternalPromiseId() != task.GetIdentifier())
+            // check if promise is correctly configured with the task. Promise's id should be task id
+            if (promise.GetPromiseId() != task.GetInstanceIdentifier())
                 throw new Exception("task and promise are not related to each other");
             _taskType = task.GetType();
             _promise = promise;

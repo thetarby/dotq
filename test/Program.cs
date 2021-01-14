@@ -45,6 +45,10 @@ namespace test
             var add=new AddTask(new (5,6));
             var swap=new SwapTask(new ("abi","naber"));
             var concat=new ConcatTask(new Inp2{x=new List<string>{"f","u","r","k","a","n"}});
+
+            var matrix = new Matrix();
+            matrix.nums = new int[100, 100];
+            var matrixSum=new MatrixSum(matrix);
             
             //TestClient();
             
@@ -53,6 +57,7 @@ namespace test
             m.Enqueue(add.Serialize());
             m.Enqueue(swap.Serialize());
             m.Enqueue(concat.Serialize());
+            m.Enqueue(matrixSum.Serialize());
             
             // normally these will happen in workers. workers will execute tasks and store their results in 
             // result store. Client will have an TaskResult handle which will update its content when result is ready.
@@ -100,10 +105,11 @@ namespace test
         
         static void Main(string[] args)
         {
-            TestRedisPromise.StressTest();
-            //TestRedisPromise.testRetry();
             TestTaskExecuting();
-            TestTaskResultHandle.ParallelTest();
+            //TestRedisPromise.StressTest();
+            //TestRedisPromise.testRetry();
+            //TestTaskResultHandle.ParallelTest();
+            //TestTaskResultHandle.CreatePromiseTest();
         }
     }
 }

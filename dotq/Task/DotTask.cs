@@ -6,6 +6,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.IO;
 using System.Net;
 using dotq.Storage;
+using dotq.TaskResultHandle;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -18,6 +19,7 @@ namespace dotq.Task
         Executing,
         Executed
     }
+    
     public abstract class DotTask<TInput, TOutput>: ITask, ISerializableTask<TInput>
     {
         private readonly TInput _arguments;
@@ -175,5 +177,6 @@ namespace dotq.Task
                 Options = new Dictionary<string, string>() //TODO: empty for now
             };
         }
+        
     }
 }
