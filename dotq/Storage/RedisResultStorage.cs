@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using dotq.Storage.RedisStructures;
 using dotq.Task;
 using dotq.TaskResultHandle;
 using ServiceStack;
@@ -12,48 +13,46 @@ namespace dotq.Storage
     public static class ResultStoreConstants
     {
         public static string TaskResults = "TaskResults";
-    } 
-    
-    public class SimpleRedisResultStorage : IResultStorage
+    }
+
+    public class SimpleRedisStore : IDataStore
     {
         private ConnectionMultiplexer _redis;
         private IDatabase _redisDatabase;
-        
-        public SimpleRedisResultStorage(ConnectionMultiplexer redis)
+        private RedisHash _hash;
+
+        public SimpleRedisStore(ConnectionMultiplexer redis)
         {
             _redis = redis;
             _redisDatabase = redis.GetDatabase();
+            _hash = new RedisHash(_redisDatabase, ResultStoreConstants.TaskResults);
         }
-        
 
-        public ITaskResultHandle GetResultOfTask(ITask t)
+        public void Clear()
         {
             throw new NotImplementedException();
         }
 
-        
-        public ITaskResultHandle GetResultOfTask(string taskInstanceId)
+        public void PutData(string key, object value)
         {
-            throw new NotImplementedException();
+            _hash[key] = (string)value;
         }
 
-        
-        public object GetRawResult(string taskInstanceId)
+        public object GetData(string key)
         {
-            return _redisDatabase.HashGet(ResultStoreConstants.TaskResults, taskInstanceId);
+            return _hash[key];
         }
 
-        
-        public object GetRawResult(ITask t)
+        public object PopData(string key)
         {
-            return _redisDatabase.HashGet(ResultStoreConstants.TaskResults, t.GetIdentifier());
+            if (_hash.In(key))
+                return _hash[key];
+            return null;
         }
 
-        
-        public bool SetResultOfTask(ITask t)
+        public bool In(string key)
         {
-            _redisDatabase.HashSet(ResultStoreConstants.TaskResults, t.GetIdentifier(), t.SerializeResult());
-            return true;
+            return _hash.In(key);
         }
     }
 }

@@ -27,7 +27,7 @@ namespace TestProject1
         public void ParallelUnitTest()
         {
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
-            var m=new MemoryStorage();
+            var m=new MemoryQueue();
             
             int taskCount = 100;
             ITask[] tasks = new ITask[taskCount];

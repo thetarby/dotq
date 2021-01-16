@@ -14,7 +14,7 @@ namespace test
         public static void ParallelTest()
         {
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
-            var m=new MemoryStorage();
+            var m=new MemoryQueue();
             
             int taskCount = 100;
             ITask[] tasks = new ITask[taskCount];
@@ -64,7 +64,7 @@ namespace test
         public static void SequentialTest()
         {
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
-            var m=new MemoryStorage();
+            var m=new MemoryQueue();
             
             int taskCount = 100;
             ITask[] tasks = new ITask[taskCount];
@@ -99,7 +99,7 @@ namespace test
         public static void CreatePromiseTest()
         {
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
-            var m=new MemoryStorage();
+            var m=new MemoryQueue();
             
             int taskCount = 100;
             ITask[] tasks = new ITask[taskCount];
