@@ -5,10 +5,10 @@ namespace dotq.Worker
 {
     public class Worker
     {
-        private IResultStorage resultStore;
+        private ITaskResultStore<string> resultStore;
         private IDotQueue<string> queue;
         
-        public Worker(IDotQueue<string> q, IResultStorage r)
+        public Worker(IDotQueue<string> q, ITaskResultStore<string> r)
         {
             queue = q;
             resultStore = r;

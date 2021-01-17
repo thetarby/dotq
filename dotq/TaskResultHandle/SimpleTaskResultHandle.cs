@@ -3,13 +3,13 @@ using dotq.Storage;
 
 namespace dotq.TaskResultHandle
 {
-    public class SimpleTaskResultHandle : ITaskResultHandle
+    public class SimpleTaskResultHandle<TResult> : ITaskResultHandle<TResult>
     {
         private string id;
-        private IResultStorage _resultStore;
+        private ITaskResultStore<string> _resultStore;
         public object Result { get; set; }
 
-        public SimpleTaskResultHandle(string taskInstanceId, IResultStorage resultStore)
+        public SimpleTaskResultHandle(string taskInstanceId, ITaskResultStore<string> resultStore)
         {
             id = taskInstanceId;
             _resultStore = resultStore;
@@ -17,9 +17,9 @@ namespace dotq.TaskResultHandle
         }
 
 
-        public object GetResult()
+        public TResult GetResult()
         {
-            return _resultStore.GetResultOfTask(id);
+            throw new NotImplementedException();
         }
 
         public string GetRawResult()

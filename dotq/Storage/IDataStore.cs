@@ -1,6 +1,6 @@
 ﻿namespace dotq.Storage
 {
-    public interface IDataStore
+    public interface IDataStore<TData>
     {
         
         /// <summary>
@@ -13,19 +13,19 @@
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value">value should be serializable</param>
-        void PutData(string key, object value);
+        void PutData(string key, TData value);
 
         /// <summary>
         /// Get value with key without removing the key
         /// </summary>
         /// <param name="key"></param>
-        object GetData(string key);
+        TData GetData(string key);
         
         /// <summary>
         /// Get value with key and then remove the key from store
         /// </summary>
         /// <param name="key"></param>
-        object PopData(string key);
+        TData PopData(string key);
         
         /// <summary>
         /// Check if given key exists in the store

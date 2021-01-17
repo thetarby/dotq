@@ -39,5 +39,7 @@ namespace dotq.Task
         DateTime? GetEndingTime();
         
         TimeSpan? GetTimeElapsed();
+
+        bool IsExecuted();
     }
 }

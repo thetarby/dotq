@@ -166,6 +166,11 @@ namespace dotq.Task
             return _endingTime.Value.Subtract(_creationTime);
         }
 
+        public bool IsExecuted()
+        {
+            return (_status == TaskStatus.Executed);
+        }
+
         public TaskModel<TInput> ToModel()
         {
             return new TaskModel<TInput>

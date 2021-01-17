@@ -29,8 +29,8 @@ namespace dotq.Storage.RedisStructures
         public HashEntry[] All => _redisDb.HashGetAll(HashKey);
         
         public long Length => _redisDb.HashLength(HashKey);
-        
-        
+
+        public bool Clear() => _redisDb.KeyDelete(HashKey);
     }
 
     
