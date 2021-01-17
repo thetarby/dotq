@@ -6,9 +6,9 @@ namespace dotq.Worker
     public class Worker
     {
         private IResultStorage resultStore;
-        private ITaskQueue<string> queue;
+        private IDotQueue<string> queue;
         
-        public Worker(ITaskQueue<string> q, IResultStorage r)
+        public Worker(IDotQueue<string> q, IResultStorage r)
         {
             queue = q;
             resultStore = r;

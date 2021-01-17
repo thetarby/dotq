@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace dotq.Storage
 {
-    public interface ITaskQueue<TInput>
+    public interface IDotQueue<TInput>
     {
         void Enqueue(TInput o, int? priority=null);
         
@@ -12,5 +12,7 @@ namespace dotq.Storage
         long Length();
 
         void Clear();
+
+        bool IsEmpty();
     }
 }

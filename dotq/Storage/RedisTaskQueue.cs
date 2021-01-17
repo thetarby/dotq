@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using dotq.Storage.RedisStructures;
 using StackExchange.Redis;
 using System.Threading.Tasks;
+using dotq.Task;
 
 namespace dotq.Storage
 {
@@ -12,7 +13,7 @@ namespace dotq.Storage
         public static string QueueKey = "TaskQueue";
     }
     
-    public class RedisTaskQueue : ITaskQueue<string>
+    public class RedisTaskQueue : IDotQueue<ITask>
     {
         private ConnectionMultiplexer _redis;
         private RedisList _list;
@@ -29,11 +30,25 @@ namespace dotq.Storage
             _list.Lpush(o);
         }
 
-        public string Dequeue()
+        public void Enqueue(ITask t, int? priority = null)
+        {
+            _list.Lpush(t.Serialize());
+        }
+        
+        public string DequeueString()
         {
             return _list.Rpop();
         }
         
+        public ITask Dequeue()
+        {
+            var deserializer = new DefaultTaskDeserializer();
+            var obj = _list.Rpop();
+            if (obj.IsNull)
+                throw new Exception("Queue is empty");
+
+            return deserializer.Deserialize(obj.ToString());
+        }
         /// <summary>
         /// Blocking dequeue. If queue is empty wait until it is filled. 
         /// </summary>
@@ -61,6 +76,11 @@ namespace dotq.Storage
         public void Clear()
         {
             _list.Destroy();
+        }
+
+        public bool IsEmpty()
+        {
+            return _list.IsEmpty();
         }
 
         public IList<RedisValue> ToList()

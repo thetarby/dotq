@@ -120,12 +120,12 @@ namespace test
             
             //TestClient();
             
-            m.Enqueue(mult.Serialize());
-            m.Enqueue(mult2.Serialize());
-            m.Enqueue(add.Serialize());
-            m.Enqueue(swap.Serialize());
-            m.Enqueue(concat.Serialize());
-            m.Enqueue(matrixSum.Serialize());
+            m.Enqueue(mult);
+            m.Enqueue(mult2);
+            m.Enqueue(add);
+            m.Enqueue(swap);
+            m.Enqueue(concat);
+            m.Enqueue(matrixSum);
             
             // normally these will happen in workers. workers will execute tasks and store their results in 
             // result store. Client will have an TaskResult handle which will update its content when result is ready.
@@ -159,10 +159,7 @@ namespace test
 
             for (long i = m.Length(); i > 0; i--)
             {
-                string serialized = (string)m.Dequeue();
-                Console.WriteLine($"dequed task: {serialized}");
-            
-                var task=new DefaultTaskDeserializer().Deserialize(serialized);
+                var task = m.Dequeue();
                 Console.WriteLine("task is executing...");
                 task.Execute();
                 Console.WriteLine($"time elapsed: {task.GetTimeElapsed().Value.TotalMilliseconds} ms");

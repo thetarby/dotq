@@ -9,7 +9,7 @@ namespace test.Tasks
         public List<string> x { get; set; }
     }
 
-    public class ConcatTask:DotTask<Inp2,int>
+    public class ConcatTask:DotTask<Inp2,string>
     {
         public ConcatTask(Inp2 arguments) : base(arguments)
         {
@@ -23,7 +23,7 @@ namespace test.Tasks
         {
         }
     
-        public override int Run(Inp2 args)
+        public override string Run(Inp2 args)
         {
             var concat = "";
             foreach (var arg in args.x)
@@ -31,7 +31,7 @@ namespace test.Tasks
                 concat += arg;
             }
             Console.WriteLine(concat);
-            return 0;
+            return concat;
         }
     }
     

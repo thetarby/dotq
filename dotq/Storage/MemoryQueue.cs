@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace dotq.Storage
 {
-    public class MemoryQueue : ITaskQueue<string>
+    public class MemoryQueue : IDotQueue<string>
     {
         private Queue<string> _queue;
         
@@ -49,6 +49,11 @@ namespace dotq.Storage
         }
 
         public void Clear()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsEmpty()
         {
             throw new NotImplementedException();
         }

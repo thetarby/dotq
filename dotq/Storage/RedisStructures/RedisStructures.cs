@@ -1,4 +1,5 @@
-﻿using StackExchange.Redis;
+﻿using System.Data;
+using StackExchange.Redis;
 using System.Threading.Tasks;
 
 namespace dotq.Storage.RedisStructures
@@ -32,6 +33,7 @@ namespace dotq.Storage.RedisStructures
         
     }
 
+    
     public class RedisList
     {
         private IDatabase _redisDb;
@@ -59,6 +61,50 @@ namespace dotq.Storage.RedisStructures
             set => _redisDb.ListSetByIndex(ListKey, key, value);
         }
 
+        
+        /// <summary>
+        /// returns True if key not exists or key exists but first elements is null. Otherwise returns false
+        /// </summary>
+        /// <returns></returns>
+        public bool IsEmpty()
+        {
+            var isKeyExists=_redisDb.KeyExists(ListKey);
+            if (!isKeyExists) return true;
+
+            var x = this[0];
+            return x.IsNull;
+        }
+        
         public bool Destroy() => _redisDb.KeyDelete(ListKey);
+    }
+
+    
+    /// <summary>
+    /// A max heap implementation with redis sorted sets
+    /// </summary>
+    public class RedisMaxQueue
+    {
+        private IDatabase _redisDb;
+        public string Key { get; set; }
+        public RedisMaxQueue(IDatabase redisDb, string key)
+        {
+            _redisDb = redisDb;
+            this.Key = key;
+        }
+
+        public void Enqueue(RedisValue o, double priority)
+        {
+            _redisDb.SortedSetAdd(Key, o, priority);
+        }
+        
+        public SortedSetEntry? Dequeue()
+        { 
+            return _redisDb.SortedSetPop(Key, Order.Descending);
+        }
+
+        public void Clear()
+        {
+            _redisDb.KeyDelete(Key);
+        }
     }
 }
