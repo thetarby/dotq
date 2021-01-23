@@ -262,13 +262,13 @@ namespace dotq.Storage
     
     public class RedisPromiseClient
     {
-        private ConnectionMultiplexer _redis;
+        protected ConnectionMultiplexer _redis;
         private ChannelMessageQueue _channelSubscription;
-        private Guid _guid;
-        private Dictionary<string, Promise> _mapper;
-        private int countTime=0;
-        private object mapLock = new object();
-        private Semaphore canContinue = new Semaphore(0, 1);
+        protected Guid _guid;
+        protected Dictionary<string, Promise> _mapper;
+        protected int countTime=0;
+        protected object mapLock = new object();
+        protected Semaphore canContinue = new Semaphore(0, 1);
         
         public RedisPromiseClient(ConnectionMultiplexer  redis)
         {
@@ -336,7 +336,7 @@ namespace dotq.Storage
          * listens for a resultChannel, which is a redis channel which will publish the result of an action(or task)
          * Immediately returns a promise which will later be resolved with the published message.
          */
-        public Promise Listen(string resultChannel)
+        public virtual Promise Listen(string resultChannel)
         {
             var promiseId = resultChannel;
             
@@ -345,7 +345,7 @@ namespace dotq.Storage
             
             _mapper.Add(promiseId, resultPromise);
 
-            var redisPubSub = GetPubSubServer();
+            SetupPubSubServer();
 
             return resultPromise;
         }
@@ -354,10 +354,10 @@ namespace dotq.Storage
         public Promise CreatePromise() => new Promise(this, Guid.NewGuid().ToString());
 
 
-        public Promise Listen(Promise promise)
+        public virtual  Promise Listen(Promise promise)
         {
             _mapper.Add(promise.GetInternalPromiseId(), promise);
-            GetPubSubServer();
+            SetupPubSubServer();
             return promise;
         }
         
@@ -365,7 +365,7 @@ namespace dotq.Storage
         //sequential
         // sets up a pubsub subscription for this instance. When called many times returns same subscription like a singleton. But unlike singleton it can dispose subscription after no one is using it
         // hence it should be called before creating any promise otherwise there may not be any thread listening for promise resolving messages.
-        ChannelMessageQueue GetPubSubServer() 
+        protected virtual void SetupPubSubServer() 
         {
             lock (mapLock)
             {
@@ -403,14 +403,12 @@ namespace dotq.Storage
                     Thread.Sleep(1000); //give some time to establish subscription
                     
                     _channelSubscription = channelSubscription;
-                    return channelSubscription;
+                    return;
                 }
-                
-                return _channelSubscription;   
             }
         }
         
-        
+
         /*
          * a different implementation;
          * 1 first adds a promise with empty message to pending promises.
@@ -451,8 +449,144 @@ namespace dotq.Storage
     }
 
 
+    /// <summary>
+    /// Very similar to RedisPromiseClient but this implementation handles promises concurrently and asynchronously.
+    /// Promises will not be resolved at the same order they are received.
+    /// </summary>
+    public class ConcurrentRedisPromiseClient : RedisPromiseClient
+    {
+        private ISubscriber _subscriber;
+
+        public ConcurrentRedisPromiseClient(ConnectionMultiplexer redis) : base(redis)
+        {
+            _subscriber = null;
+        }
+
+        private Thread CloseConnectionThread(Semaphore luck, float timeoutInSeconds = -1,
+            Promise promise = null)
+        {
+            if (promise == null && timeoutInSeconds != -1)
+                throw new Exception("if timeout is specified a promise should be passed");
+            
+            Thread thread = new Thread(new ParameterizedThreadStart(CloseConnectionThread));
+            thread.Start((object)(luck, timeoutInSeconds, promise));
+            return thread;
+        }
+
+        private void CloseConnectionThread(object o)
+        {
+            var args = ((Semaphore, float, Promise)) o;
+            var promiseTimeoutInSeconds = args.Item2;
+            var promise = args.Item3;
+            var l = args.Item1;
+
+            if (promiseTimeoutInSeconds == -1)
+            {
+                l.WaitOne();
+            }
+            else
+            {
+                // TODO: this does not work now. It was working for per promise connections
+                l.WaitOne((int)(promiseTimeoutInSeconds * 1000));
+                promise.TimedOut();
+            }
+            
+            Console.WriteLine("ALL PROMISES RESOLVED UNSUBSCRIBING...");
+            _subscriber.Unsubscribe(_guid.ToString());
+            _subscriber = null;
+            canContinue.Release();
+        }
+
+        protected override void SetupPubSubServer()
+        {
+            lock (mapLock)
+            {
+                if (this._subscriber == null)
+                {
+                    Semaphore luck = new Semaphore(0,1);
+                    
+                    var subscriber = _redis.GetSubscriber();
+            
+                    subscriber.Subscribe(_guid.ToString(), async (channel, message) => {
+                        countTime++;
+                        lock (mapLock)
+                        {
+                            var promiseIdActualMessageDto =
+                                JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.ToString());
+                            var promiseId = promiseIdActualMessageDto.PromiseId;
+                            var realmsg = promiseIdActualMessageDto.ActualMessage;
+
+                            if (_mapper.ContainsKey(promiseId))
+                            {
+                                var promise = _mapper[promiseId];
+                                _mapper.Remove(promiseId);
+                                promise.Payload = realmsg;
+                                promise._OnResolveBase();
+                                if (_mapper.Count == 0)
+                                {
+                                    luck.Release();
+                                    // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
+                                    canContinue.WaitOne();
+                                }
+                            }
+                        }
+                    });
+                    
+                    CloseConnectionThread(luck); // this starts thread
+                    _subscriber = subscriber;
+                    Thread.Sleep(1000); //give some time to establish subscription
+                    
+                }
+            }
+            
+            
+            // lock (mapLock)
+            // {
+            //     if (this._channelSubscription == null)
+            //     {
+            //         Semaphore luck = new Semaphore(0,1);
+            //
+            //         var channelSubscription = _redis.GetSubscriber().Subscribe(_guid.ToString());
+            //         channelSubscription.OnMessage((message =>
+            //         {
+            //             countTime++;
+            //             lock (mapLock)
+            //             {
+            //                 var promiseIdActualMessageDto = JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.Message.ToString());
+            //                 var promiseId = promiseIdActualMessageDto.PromiseId;
+            //                 var realmsg = promiseIdActualMessageDto.ActualMessage;
+            //                 
+            //                 if (_mapper.ContainsKey(promiseId))
+            //                 {
+            //                     var promise = _mapper[promiseId];
+            //                     _mapper.Remove(promiseId);
+            //                     promise.Payload = realmsg;
+            //                     promise._OnResolveBase();
+            //                     if (_mapper.Count == 0)
+            //                     {
+            //                         luck.Release();
+            //                         // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
+            //                         canContinue.WaitOne();
+            //                     } 
+            //                 }
+            //             }
+            //         }));
+            //         
+            //         CloseConnectionThread(channelSubscription, luck); // this starts thread
+            //         Thread.Sleep(1000); //give some time to establish subscription
+            //         
+            //         _channelSubscription = channelSubscription;
+            //         return channelSubscription;
+            //     }
+            //     
+            //     return _channelSubscription;   
+            // }
+        }
+    }
+
+    
     // A factory-like class which returns same instance of promiseClient as long as passed redis instance is the same 
-    public class RedisPromiseClientFactory
+    public static class RedisPromiseClientFactory
     {
         private static readonly object lck = new object();  
         private static List<RedisPromiseClient> _instances = new List<RedisPromiseClient>();  
