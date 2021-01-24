@@ -120,6 +120,51 @@ namespace test
 
             Console.WriteLine("Stress test is successful");
         }
+        
+        public static void StressTestConcurrent()
+        {
+            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
+            var proClient = new ConcurrentRedisPromiseClient(redis);
+            var clientguid = proClient.GetId().ToString();
+            var promises = new List<Promise>();
+            int promiseCount = 1000;
+
+            for (int i = 0; i < promiseCount; i++)
+            {
+                var promise = proClient.Listen(i.ToString());
+                promise.OnResolve = (payload) =>
+                {
+                    Console.WriteLine($"Promise({promise.GetPromiseId().ToString()}) is resolved. Payload: {payload}");
+                };
+                if (promise.Payload != null || promise.IsResolved() == true)
+                    throw new Exception();
+                promises.Add(promise);
+            }
+
+
+            var server = new RedisPromiseServer(redis);
+            for (int i = 0; i < promiseCount; i++)
+            {
+                //server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString()); // or;
+                server.Resolve(promises[i].GetPromiseId(), i.ToString());
+            }
+
+            Thread.Sleep(100);
+            for (int i = 0; i < promiseCount; i++)
+            {
+                var promise = promises[i];
+                while (promise.IsResolved()==false)
+                {
+                    Console.WriteLine("waiting");
+                    Thread.Sleep(100);
+                }
+
+                if (promise.Payload == null || promise.IsResolved() == false || (string) promise.Payload != i.ToString())
+                    throw new Exception();
+            }
+
+            Console.WriteLine("Stress test is successful");
+        }
 
         public static void RedisPubSubBug()
         {
@@ -217,7 +262,7 @@ namespace test
         {
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
             ISubscriber sub = redis.GetSubscriber();
-            int PublishCount = 100;
+            int PublishCount = 10000;
             object lck= new object();
             
             var guid = Guid.NewGuid();

@@ -577,7 +577,6 @@ namespace dotq.Storage
         
         public void Resolve(string promiseId, string message)
         {
-            var x = new int[] {1, 2, 3};
             try
             {
                 var split = promiseId.Split(':');

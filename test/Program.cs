@@ -170,8 +170,11 @@ namespace test
         
         static void Main(string[] args)
         {
-            TestTaskExecutingRedisQueue();
+            //TestTaskExecutingRedisQueue();
             //TestRedisPromise.StressTest();
+            //TestRedisPromise.StressTestConcurrent();
+            TestRedisPromise.RedisPubSubExchangeConcurrent();
+            //TestRedisPromise.RedisPubSubExchangeSequential();
             //TestRedisPromise.testRetry();
             //TestTaskResultHandle.ParallelTest();
             //TestTaskResultHandle.CreatePromiseTest();
