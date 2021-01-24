@@ -538,53 +538,10 @@ namespace dotq.Storage
                     
                 }
             }
-            
-            
-            // lock (mapLock)
-            // {
-            //     if (this._channelSubscription == null)
-            //     {
-            //         Semaphore luck = new Semaphore(0,1);
-            //
-            //         var channelSubscription = _redis.GetSubscriber().Subscribe(_guid.ToString());
-            //         channelSubscription.OnMessage((message =>
-            //         {
-            //             countTime++;
-            //             lock (mapLock)
-            //             {
-            //                 var promiseIdActualMessageDto = JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.Message.ToString());
-            //                 var promiseId = promiseIdActualMessageDto.PromiseId;
-            //                 var realmsg = promiseIdActualMessageDto.ActualMessage;
-            //                 
-            //                 if (_mapper.ContainsKey(promiseId))
-            //                 {
-            //                     var promise = _mapper[promiseId];
-            //                     _mapper.Remove(promiseId);
-            //                     promise.Payload = realmsg;
-            //                     promise._OnResolveBase();
-            //                     if (_mapper.Count == 0)
-            //                     {
-            //                         luck.Release();
-            //                         // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
-            //                         canContinue.WaitOne();
-            //                     } 
-            //                 }
-            //             }
-            //         }));
-            //         
-            //         CloseConnectionThread(channelSubscription, luck); // this starts thread
-            //         Thread.Sleep(1000); //give some time to establish subscription
-            //         
-            //         _channelSubscription = channelSubscription;
-            //         return channelSubscription;
-            //     }
-            //     
-            //     return _channelSubscription;   
-            // }
         }
     }
 
-    
+
     // A factory-like class which returns same instance of promiseClient as long as passed redis instance is the same 
     public static class RedisPromiseClientFactory
     {
