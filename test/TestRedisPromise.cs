@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using dotq.Storage;
+using dotq.Storage.RedisPromise;
 using Newtonsoft.Json;
 using ServiceStack;
 using ServiceStack.Redis;

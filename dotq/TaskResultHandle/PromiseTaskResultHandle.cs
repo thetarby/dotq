@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Xml.Schema;
 using dotq.Storage;
+using dotq.Storage.RedisPromise;
 using dotq.Task;
 using Newtonsoft.Json;
 using StackExchange.Redis;

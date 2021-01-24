@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using dotq.Storage.Pooling;
 using StackExchange.Redis;
 
 /*
@@ -27,7 +28,7 @@ using StackExchange.Redis;
 // TODOS: * Make sure promise ids are unique in the process (with a static class variable maybe?)
 //        * Singleton promiseClient
 
-namespace dotq.Storage
+namespace dotq.Storage.RedisPromise
 {
     
     public static class Constants
@@ -263,7 +264,7 @@ namespace dotq.Storage
     public class RedisPromiseClient
     {
         protected ConnectionMultiplexer _redis;
-        private ChannelMessageQueue _channelSubscription;
+        protected ChannelMessageQueue _channelSubscription;
         protected Guid _guid;
         protected Dictionary<string, Promise> _mapper;
         protected int countTime=0;
@@ -289,7 +290,7 @@ namespace dotq.Storage
         public bool IsPromiseInMapper(Promise p) => _mapper.ContainsKey(p.GetInternalPromiseId());
         
         
-        private Thread CloseConnectionThread(
+        protected virtual Thread CloseConnectionThread(
             ChannelMessageQueue channelSubscription, 
             Semaphore luck, 
             float timeoutInSeconds=-1, 
@@ -305,7 +306,7 @@ namespace dotq.Storage
         }
         
         
-        private void CloseConnectionThread(object o)
+        protected virtual void CloseConnectionThread(object o)
         {
             var args = ((ChannelMessageQueue, Semaphore, float, Promise)) o;
             var promiseTimeoutInSeconds = args.Item3;
@@ -449,121 +450,6 @@ namespace dotq.Storage
     }
 
 
-    /// <summary>
-    /// Very similar to RedisPromiseClient but this implementation handles promises concurrently and asynchronously.
-    /// Promises will not be resolved at the same order they are received.
-    /// </summary>
-    public class ConcurrentRedisPromiseClient : RedisPromiseClient
-    {
-        private ISubscriber _subscriber;
-
-        public ConcurrentRedisPromiseClient(ConnectionMultiplexer redis) : base(redis)
-        {
-            _subscriber = null;
-        }
-
-        private Thread CloseConnectionThread(Semaphore luck, float timeoutInSeconds = -1,
-            Promise promise = null)
-        {
-            if (promise == null && timeoutInSeconds != -1)
-                throw new Exception("if timeout is specified a promise should be passed");
-            
-            Thread thread = new Thread(new ParameterizedThreadStart(CloseConnectionThread));
-            thread.Start((object)(luck, timeoutInSeconds, promise));
-            return thread;
-        }
-
-        private void CloseConnectionThread(object o)
-        {
-            var args = ((Semaphore, float, Promise)) o;
-            var promiseTimeoutInSeconds = args.Item2;
-            var promise = args.Item3;
-            var l = args.Item1;
-
-            if (promiseTimeoutInSeconds == -1)
-            {
-                l.WaitOne();
-            }
-            else
-            {
-                // TODO: this does not work now. It was working for per promise connections
-                l.WaitOne((int)(promiseTimeoutInSeconds * 1000));
-                promise.TimedOut();
-            }
-            
-            Console.WriteLine("ALL PROMISES RESOLVED UNSUBSCRIBING...");
-            _subscriber.Unsubscribe(_guid.ToString());
-            _subscriber = null;
-            canContinue.Release();
-        }
-
-        protected override void SetupPubSubServer()
-        {
-            lock (mapLock)
-            {
-                if (this._subscriber == null)
-                {
-                    Semaphore luck = new Semaphore(0,1);
-                    
-                    var subscriber = _redis.GetSubscriber();
-            
-                    subscriber.Subscribe(_guid.ToString(), async (channel, message) => {
-                        countTime++;
-                        lock (mapLock)
-                        {
-                            var promiseIdActualMessageDto =
-                                JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.ToString());
-                            var promiseId = promiseIdActualMessageDto.PromiseId;
-                            var realmsg = promiseIdActualMessageDto.ActualMessage;
-
-                            if (_mapper.ContainsKey(promiseId))
-                            {
-                                var promise = _mapper[promiseId];
-                                _mapper.Remove(promiseId);
-                                promise.Payload = realmsg;
-                                promise._OnResolveBase();
-                                if (_mapper.Count == 0)
-                                {
-                                    luck.Release();
-                                    // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
-                                    canContinue.WaitOne();
-                                }
-                            }
-                        }
-                    });
-                    
-                    CloseConnectionThread(luck); // this starts thread
-                    _subscriber = subscriber;
-                    Thread.Sleep(1000); //give some time to establish subscription
-                    
-                }
-            }
-        }
-    }
-
-
-    // A factory-like class which returns same instance of promiseClient as long as passed redis instance is the same 
-    public static class RedisPromiseClientFactory
-    {
-        private static readonly object lck = new object();  
-        private static List<RedisPromiseClient> _instances = new List<RedisPromiseClient>();  
-        public static RedisPromiseClient GetInstance(ConnectionMultiplexer redis)  
-        {
-            lock (lck)  
-            {
-                if (_instances.Exists((client => client.GetRedisInstance() == redis)))
-                {
-                    return _instances.First(d => d.GetRedisInstance()==redis);
-                }
-                
-                var client = new RedisPromiseClient(redis);
-                _instances.Add(client);
-                return client;  
-            }
-        }
-    }
-    
-    
     public class RedisPromiseServer
     {
         private ConnectionMultiplexer _redis;

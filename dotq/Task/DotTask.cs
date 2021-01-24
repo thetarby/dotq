@@ -6,6 +6,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.IO;
 using System.Net;
 using dotq.Storage;
+using dotq.Storage.RedisPromise;
 using dotq.TaskResultHandle;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

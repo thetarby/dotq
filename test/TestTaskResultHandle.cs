@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using dotq.Storage;
+using dotq.Storage.RedisPromise;
 using dotq.Task;
 using dotq.TaskResultHandle;
 using StackExchange.Redis;

@@ -8,13 +8,15 @@ namespace dotq.Storage.Pooling
 {
     public abstract class GenericPool<T>
     {
-        protected Queue<(T, DateTime)> Available=default;
-        protected Dictionary<T, DateTime> InUse=default;
-        private object lck;
-        private TimeSpan _deadTime;
+        protected Queue<(T, DateTime)> Available;
+        protected Dictionary<T, DateTime> InUse;
+        private object lck=new object();
+        private TimeSpan? _deadTime;
 
-        public GenericPool(TimeSpan deadTime)
+        public GenericPool(TimeSpan? deadTime)
         {
+            Available = new Queue<(T, DateTime)>();
+            InUse = new Dictionary<T, DateTime>();
             _deadTime = deadTime;
         }
 
@@ -53,7 +55,7 @@ namespace dotq.Storage.Pooling
                     var pair=Available.Dequeue();
                     T resource = pair.Item1;
                     var createTime = pair.Item2;
-                    if (now - createTime < _deadTime)
+                    if (_deadTime==null || (now - createTime < _deadTime.Value))
                     {
                         // resource is not timed out
                         if (Validate(resource))
