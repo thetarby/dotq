@@ -13,6 +13,7 @@ namespace dotq.TaskRegistry
         {
             _tasks = new Dictionary<string, Type>();
         }
+        
         private static readonly Lazy<TaskRegistry> _lazy = new(() => new TaskRegistry());
         
         public static TaskRegistry Instance => _lazy.Value;

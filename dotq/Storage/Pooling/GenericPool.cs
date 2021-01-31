@@ -12,12 +12,14 @@ namespace dotq.Storage.Pooling
         protected Dictionary<T, DateTime> InUse;
         private object lck=new object();
         private TimeSpan? _deadTime;
+        private readonly int? _maxCount;
 
-        public GenericPool(TimeSpan? deadTime)
+        public GenericPool(TimeSpan? deadTime, int? maxCount=100)
         {
             Available = new Queue<(T, DateTime)>();
             InUse = new Dictionary<T, DateTime>();
             _deadTime = deadTime;
+            _maxCount = maxCount;
         }
 
         /// <summary>
@@ -69,11 +71,13 @@ namespace dotq.Storage.Pooling
                     DisposeResource(resource);
 
                 }
-                // no objects available, create a new one 
+                
+                // no objects available, a new one should be created 
                 var createdResource = Create();
                 InUse.Add(createdResource, now);
                 return createdResource; 
             }
+
         }
         
         public virtual void Return(T resource)

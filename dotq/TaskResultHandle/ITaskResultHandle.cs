@@ -17,7 +17,6 @@ namespace dotq.TaskResultHandle
     public interface ITaskResultHandle<TResultType>
     {
         //will check and fetch result from ResultStorage
-        // it returns object but client should already know the type hence can cast it to the proper type
         TResultType GetResult();
 
         string GetStringResult();

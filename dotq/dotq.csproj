@@ -11,8 +11,4 @@
       <PackageReference Include="StackExchange.Redis" Version="2.2.4" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Api" />
-    </ItemGroup>
-
 </Project>

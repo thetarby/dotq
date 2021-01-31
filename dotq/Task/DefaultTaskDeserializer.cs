@@ -20,8 +20,14 @@ namespace dotq.Task
 
         }
         
-        // since a dottask should give same result when GetInstanceIdentifier is called after deserialization,
-        // json string should include TaskInstanceIdentifier field (Otherwise GetInstanceIdentifier creates a new guid and gives a different result)
+        /// <summary>
+        /// since a dottask should give same result when GetInstanceIdentifier is called after deserialization,
+        /// json string should include TaskInstanceIdentifier field (Otherwise GetInstanceIdentifier creates a new guid and gives a different result)
+        ///
+        /// This method checks if TaskInstanceIdentifier is set in the json string. If not returns false.
+        /// </summary>
+        /// <param name="json"></param>
+        /// <returns></returns>
         public bool IsValid(string json)
         {
             

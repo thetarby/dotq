@@ -37,13 +37,18 @@ namespace dotq.Storage.RedisPromise
             return new PersistentRedisPromiseClient(_redis);
         }
 
+        // a default singleton instance
+        private static readonly Lazy<PersistentRedisPromiseClientPool> _lazy = new(() => new PersistentRedisPromiseClientPool());
+        
+        public static PersistentRedisPromiseClientPool Instance => _lazy.Value;
+        
         protected override void DisposeResource(PersistentRedisPromiseClient resource)
         {
             resource.Dispose();
         }
     }
-    
-    
+
+
     /// <summary>
     /// A factory-like class which returns same instance of promiseClient as long as passed redis instance is the same.
     /// Should be used to get base RedisPromiseClient and ConcurrentRedisPromiseClient instances

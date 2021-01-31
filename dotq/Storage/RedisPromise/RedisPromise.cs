@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using dotq.Storage.Pooling;
+using Newtonsoft.Json;
 using StackExchange.Redis;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 /*
  * example usage:
@@ -95,7 +96,12 @@ namespace dotq.Storage.RedisPromise
         }
     }
     
-    
+    /// <summary>
+    /// Each promise has an internal id, which is _id and a public id accessed via GetPromiseId.
+    /// Public id is basically internal prefixed by promiseClient's id with a ':' sign in between.
+    /// This enables resolver to know which client is listening for the promise and which task result handle is
+    /// waiting for the promise by only parsing its id.
+    /// </summary>
     public class Promise
     {
         private bool _isTimedOut=false;
@@ -105,7 +111,7 @@ namespace dotq.Storage.RedisPromise
         
         public object Payload { get; set; }
         
-        
+
         public Action<object> OnResolve { get; set; } = null;
         
         
@@ -454,9 +460,9 @@ namespace dotq.Storage.RedisPromise
     {
         private ConnectionMultiplexer _redis;
 
-        public RedisPromiseServer(ConnectionMultiplexer redis)
+        public RedisPromiseServer(ConnectionMultiplexer redis=null)
         {
-            _redis = redis;
+            _redis = redis ?? ConnectionMultiplexer.Connect("localhost");
         }
 
         ConnectionMultiplexer GetRedisInstance() => _redis;

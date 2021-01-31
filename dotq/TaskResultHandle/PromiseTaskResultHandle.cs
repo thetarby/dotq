@@ -17,25 +17,21 @@ namespace dotq.TaskResultHandle
     public class PromiseTaskResultHandle<TResult> : ITaskResultHandle<TResult>
     {
         private Promise _promise;
+        private string _taskIdentifier;
+        private string _taskInstanceIdentifier;
         private Type _taskType;
 
-        public PromiseTaskResultHandle(ITask task, Promise promise)
+
+        public PromiseTaskResultHandle(ITask task, Promise promise, Action<object> onResolve=null)
         {
-            // check if promise is correctly configured with the task. Promise's internal id should be task id
-            if (promise.GetInternalPromiseId() != task.GetIdentifier())
+            // check if promise is correctly configured with the task. Promise's id should be task id
+            if (promise.ParsePromiseId().Item2 != task.GetInstanceIdentifier())
                 throw new Exception("task and promise are not related to each other");
-            _taskType = task.GetType();
+            _taskIdentifier = task.GetIdentifier();
+            _taskInstanceIdentifier = task.GetInstanceIdentifier();
             _promise = promise;
         }
         
-        public PromiseTaskResultHandle(ITask task, Promise promise, Action<object> onResolve)
-        {
-            // check if promise is correctly configured with the task. Promise's id should be task id
-            if (promise.GetPromiseId() != task.GetInstanceIdentifier())
-                throw new Exception("task and promise are not related to each other");
-            _taskType = task.GetType();
-            _promise = promise;
-        }
         
         /// <summary>
         /// binds task and handle directly and starts to listen which means it should be used after task is enqueued.
@@ -52,25 +48,29 @@ namespace dotq.TaskResultHandle
             var promise = promiseClient.Listen(key);
             promise.OnResolve = onResolve;
             _promise = promise;
-        
+            _taskIdentifier = task.GetIdentifier();
+            _taskInstanceIdentifier = task.GetInstanceIdentifier();
             //TODO: use listenImmediately;
         }
         
+        public Type GetTaskType() => TaskRegistry.TaskRegistry.Instance.GetTaskByName(_taskIdentifier);
         
-        public Type GetTaskType() => _taskType;
         
         public Promise GetPromise() => _promise;
+        
         
         public bool IsResolved() => _promise.IsResolved();
         
         
         public TResult GetResult() => JsonConvert.DeserializeObject<TResult>((string)_promise.Payload); // NOTE: since we are using json.net everywhere in task logic, promise payload will be a string. It is safe to cast to string.
 
+        
         public object GetObjectResult()
         {
             return JsonConvert.DeserializeObject((string) _promise.Payload, typeof(TResult));
         }
 
+        
         public string GetStringResult()
         {
             if (!_promise.IsResolved())

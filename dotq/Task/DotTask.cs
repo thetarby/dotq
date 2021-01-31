@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
 using System.IO;
@@ -25,8 +26,7 @@ namespace dotq.Task
     {
         private readonly TInput _arguments;
         private readonly string _identifier;
-        //private readonly string _instanceIdentifier;
-        public string _instanceIdentifier { get; set; }
+        private string _instanceIdentifier;
         private TOutput _objectResult;
         private TaskStatus _status=TaskStatus.Pending;
         
@@ -38,6 +38,7 @@ namespace dotq.Task
         {
             _creationTime=DateTime.Now.ToUniversalTime();
             _identifier = this.GetType().Namespace + this.GetType().Name;
+            _instanceIdentifier = Guid.NewGuid().ToString();
             _arguments = arguments;
             var registry = TaskRegistry.TaskRegistry.Instance;
             registry.RegisterTaskIfNotExists(this.GetType());
@@ -86,10 +87,16 @@ namespace dotq.Task
         // NOTE: this should give the same result when a task is serialized and then deserialized.
         public string GetInstanceIdentifier()
         {
-            return _instanceIdentifier == null ? GetIdentifier() + Guid.NewGuid() : _instanceIdentifier;
+            if (_instanceIdentifier != null) return _instanceIdentifier;
+            Console.WriteLine("instance identifier is not set");
+            return null;
         }
         
-        // sets task's instanceIdentifier to promise's id so that when task is serialized and sent over network its promise can still be resolved by getTaskInstanceIdentifier()
+        /// <summary>
+        /// sets task's instanceIdentifier to promise's internal_id so that when task is serialized and sent over network its promise can still be resolved by getTaskInstanceIdentifier()
+        /// </summary>
+        /// <param name="p"></param>
+        /// <exception cref="Exception"></exception>
         public void BindPromise(Promise p)
         {
             if (_instanceIdentifier != null)
