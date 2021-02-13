@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Xml.Schema;
 using dotq.Storage;
 using dotq.Storage.RedisPromise;
@@ -17,18 +18,16 @@ namespace dotq.TaskResultHandle
     public class PromiseTaskResultHandle<TResult> : ITaskResultHandle<TResult>
     {
         private Promise _promise;
-        private string _taskIdentifier;
-        private string _taskInstanceIdentifier;
+        private ITask _task;
         private Type _taskType;
-
+        private Action<object> _onResolve;
 
         public PromiseTaskResultHandle(ITask task, Promise promise, Action<object> onResolve=null)
         {
             // check if promise is correctly configured with the task. Promise's id should be task id
             if (promise.ParsePromiseId().Item2 != task.GetInstanceIdentifier())
                 throw new Exception("task and promise are not related to each other");
-            _taskIdentifier = task.GetIdentifier();
-            _taskInstanceIdentifier = task.GetInstanceIdentifier();
+            _task = task;
             _promise = promise;
         }
         
@@ -48,12 +47,38 @@ namespace dotq.TaskResultHandle
             var promise = promiseClient.Listen(key);
             promise.OnResolve = onResolve;
             _promise = promise;
-            _taskIdentifier = task.GetIdentifier();
-            _taskInstanceIdentifier = task.GetInstanceIdentifier();
+            _task = task;
             //TODO: use listenImmediately;
         }
+
+
+        public PromiseTaskResultHandle(ITask task, Action<object> onResolve = null)
+        {
+            _task = task;
+            _onResolve = onResolve;
+        }
+
+
+        public void Listen(ConnectionMultiplexer redis)
+        {
+            var promiseClient = RedisPromiseClientFactory.GetInstance(redis);
+            var promise = promiseClient.Listen(_task.GetInstanceIdentifier());
+            if (_onResolve != null)
+                promise.OnResolve = _onResolve;
+            _promise = promise;
+        }
         
-        public Type GetTaskType() => TaskRegistry.TaskRegistry.Instance.GetTaskByName(_taskIdentifier);
+        
+        public void Queue(IDotQueue<ITask> q)
+        {
+            q.Enqueue(_task);
+        }
+        
+        
+        public Type GetTaskType() => TaskRegistry.TaskRegistry.Instance.GetTaskByName(_task.GetIdentifier());
+
+
+        public ITask GetTask() => _task;
         
         
         public Promise GetPromise() => _promise;

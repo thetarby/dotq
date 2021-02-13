@@ -1,4 +1,5 @@
-﻿using dotq.Api.Orhestration;
+﻿using System;
+using dotq.Api.Orhestration;
 using dotq.Storage;
 using dotq.Storage.RedisPromise;
 using dotq.Task;
@@ -54,11 +55,37 @@ namespace dotq.Api
             return handle;
         }
         
+        
+        public static ITaskResultHandle<TOut> Build<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task, Action<object> onResolve=null)
+        {
+            var handle = new PromiseTaskResultHandle<TOut>(task, onResolve);
+            return handle;
+        }
+        
+
+        public static PromiseTaskResultHandle<TOut> DelayHandle<TIn, TOut>(this DotqApi dotqApi, PromiseTaskResultHandle<TOut> handle)
+        {
+            handle.Listen(dotqApi._redis);
+            handle.Queue(dotqApi._taskQueue);
+            return handle;
+        }
+        
+        
         public static ITaskResultHandle<TOut> Delay2<TOut, TIn>(this DotqApi dotqApi, DotTask<TIn, TOut> task)
         {
             dotqApi._taskQueue.Enqueue(task);
             
             return new PromiseTaskResultHandle<TOut>(task, dotqApi._redis);
         }
+    }
+
+
+    public static class DotTaskExtensions
+    {
+    }
+    
+    
+    public static class TaskResultHandleExtensions
+    {
     }
 }

@@ -108,7 +108,8 @@ namespace dotq.Storage.RedisPromise
         private readonly string _id; // result channel must be unique far all active promises
         private readonly ConnectionMultiplexer _redis;
         private readonly RedisPromiseClient _promiseClient;
-        
+        private readonly SemaphoreSlim _lock = new SemaphoreSlim(0);
+
         public object Payload { get; set; }
         
 
@@ -123,7 +124,8 @@ namespace dotq.Storage.RedisPromise
             OnResolve?.Invoke(Payload);
             var db = _redis.GetDatabase();
             var success = db.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
-            
+            _lock.Release();
+
             // TODO: this exception somehow goes silent and prevents background thread to close connection.
             // also for now this is not necessary
             //if (success == false)
@@ -162,6 +164,13 @@ namespace dotq.Storage.RedisPromise
             _id = id ?? Guid.NewGuid().ToString();
             _promiseClient = promiseClient;
             _redis = promiseClient.GetRedisInstance();
+        }
+
+
+        public object Wait()
+        {
+            _lock.Wait(); // wait until OnResolve is called and released lock
+            return Payload;
         }
         
         
