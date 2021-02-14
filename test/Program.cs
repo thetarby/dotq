@@ -189,8 +189,14 @@ namespace test
             if (args.Length > 0 && args[0]=="client-2")
             {
                 var dotq = new DotqApi();
-                var task = new AddTask((5, 5));
-                var handle = dotq.Build(task, o => Console.WriteLine($"Result is {o}"));
+                var task = new ListSum(new List<int>{1,2,3,4,5,6,7,8,9,10});
+                var handle = dotq.Build(task, firstTaskResult =>
+                {
+                    Console.WriteLine($"first is executed {firstTaskResult}");
+                    var handle2 = dotq.Build(new AddTask((firstTaskResult, 5)), o1 =>{Console.WriteLine($"Chain result is {o1}");} );
+                    dotq.DelayHandle(handle2);
+                });
+                
                 dotq.DelayHandle(handle);
                 handle.Wait();
                 var result = handle.GetResult();
