@@ -21,11 +21,13 @@ namespace TestProject1
             var mult=new MultiplyTask(new Inp{x=4,y=5});
             var add=new AddTask(new (5,6));
             var concat=new ConcatTask(new Inp2{x=new List<string>(){"Hello", " ", "World", "!"}});
+            var listSum=new ListSum(new List<int>{1,2,3,4,5});
             
             m.Enqueue(mult);
             m.Enqueue(add);
             m.Enqueue(concat);
-
+            m.Enqueue(listSum);
+            
             var registry = (ITaskRegistry) TaskRegistry.Instance;
             registry.Clear();
             registry.DiscoverTasks();
@@ -48,6 +50,11 @@ namespace TestProject1
                 {
                     var res=(string)task.GetObjectResult();
                     Assert.Equal("Hello World!", res);    
+                }
+                if (i == 3)
+                {
+                    var res=(int)task.GetObjectResult();
+                    Assert.Equal(5*6/2, res);    
                 }
             }
             

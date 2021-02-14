@@ -57,7 +57,7 @@ namespace dotq.Api
         }
         
         
-        public static PromiseTaskResultHandle<TOut> Build<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task, Action<object> onResolve=null)
+        public static PromiseTaskResultHandle<TOut> Build<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task, Action<TOut> onResolve=null)
         {
             var handle = new PromiseTaskResultHandle<TOut>(task, onResolve);
             return handle;

@@ -20,9 +20,9 @@ namespace dotq.TaskResultHandle
         private Promise _promise;
         private ITask _task;
         private Type _taskType;
-        private Action<object> _onResolve;
+        private Action<TResult> _onResolve;
 
-        public PromiseTaskResultHandle(ITask task, Promise promise, Action<object> onResolve=null)
+        public PromiseTaskResultHandle(ITask task, Promise promise, Action<TResult> onResolve=null)
         {
             // check if promise is correctly configured with the task. Promise's id should be task id
             if (promise.ParsePromiseId().Item2 != task.GetInstanceIdentifier())
@@ -39,19 +39,24 @@ namespace dotq.TaskResultHandle
         /// <param name="task"></param>
         /// <param name="redis"></param>
         /// <param name="onResolve"></param>
-        public PromiseTaskResultHandle(ITask task, ConnectionMultiplexer redis ,Action<object> onResolve=null, bool listenImmediately=false)
+        public PromiseTaskResultHandle(ITask task, ConnectionMultiplexer redis ,Action<TResult> onResolve=null, bool listenImmediately=false)
         {
             // this ctor binds promise and tasks itself
             var promiseClient = RedisPromiseClientFactory.GetInstance(redis);
             var promise = promiseClient.CreatePromise();
-            promise.OnResolve = onResolve;
+            promise.OnResolve = (o =>
+            {
+                string message = (string) o;
+                TResult res = JsonConvert.DeserializeObject<TResult>(message);
+                _onResolve(res);
+            });
             _promise = promise;
             _task = task;
             //TODO: use listenImmediately;
         }
 
 
-        public PromiseTaskResultHandle(ITask task, Action<object> onResolve = null)
+        public PromiseTaskResultHandle(ITask task, Action<TResult> onResolve = null)
         {
             _task = task;
             _onResolve = onResolve;
@@ -65,7 +70,12 @@ namespace dotq.TaskResultHandle
             promiseClient.Listen(promise);
                 
             if (_onResolve != null)
-                promise.OnResolve = _onResolve;
+                promise.OnResolve = promise.OnResolve = (o =>
+                {
+                    string message = (string) o;
+                    TResult res = JsonConvert.DeserializeObject<TResult>(message);
+                    _onResolve(res);
+                });
             _promise = promise;
         }
         
