@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http;
 using System.Threading;
+using dotq.Api;
 using dotq.Client;
 using dotq.Storage;
 using dotq.Task;
@@ -170,7 +171,32 @@ namespace test
         
         static void Main(string[] args)
         {
-            TestApi.Test1();
+            if (args.Length > 0 && args[0]=="worker")
+            {
+                var dotq = new DotqApi();
+                var worker = dotq.CreateWorker();
+                worker.StartConsumerLoop(new TimeSpan(0, 0, 50));
+            }
+            if (args.Length > 0 && args[0]=="client-1")
+            {
+                var dotq = new DotqApi();
+                var task = new AddTask((5, 5));
+                var handle = dotq.Delay(task);
+                handle.Wait();
+                var result = handle.GetResult();
+                Console.WriteLine($"Result :{result}");
+            }
+            if (args.Length > 0 && args[0]=="client-2")
+            {
+                var dotq = new DotqApi();
+                var task = new AddTask((5, 5));
+                var handle = dotq.Build(task, o => Console.WriteLine($"Result is {o}"));
+                dotq.DelayHandle(handle);
+                handle.Wait();
+                var result = handle.GetResult();
+                Console.WriteLine($"Result :{result}");
+            }
+            //TestApi.Test1();
             //TestTaskExecutingRedisQueue();
             //TestRedisPromise.StressTest();
             //TestRedisPromise.StressTestConcurrent();

@@ -29,7 +29,7 @@ namespace dotq.Storage.RedisPromise
             return thread;
         }
 
-        private void CloseConnectionThread(object o)
+        protected override void CloseConnectionThread(object o)
         {
             var args = ((Semaphore, float, Promise)) o;
             var promiseTimeoutInSeconds = args.Item2;
@@ -59,36 +59,11 @@ namespace dotq.Storage.RedisPromise
             {
                 if (this._subscriber == null)
                 {
-                    Semaphore luck = new Semaphore(0,1);
-                    
                     var subscriber = _redis.GetSubscriber();
             
-                    subscriber.Subscribe(_guid.ToString(), async (channel, message) => {
-                        countTime++;
-                        lock (mapLock)
-                        {
-                            var promiseIdActualMessageDto =
-                                JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.ToString());
-                            var promiseId = promiseIdActualMessageDto.PromiseId;
-                            var realmsg = promiseIdActualMessageDto.ActualMessage;
-
-                            if (_mapper.ContainsKey(promiseId))
-                            {
-                                var promise = _mapper[promiseId];
-                                _mapper.Remove(promiseId);
-                                promise.Payload = realmsg;
-                                promise._OnResolveBase();
-                                if (_mapper.Count == 0)
-                                {
-                                    luck.Release();
-                                    // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
-                                    canContinue.WaitOne();
-                                }
-                            }
-                        }
-                    });
+                    subscriber.Subscribe(_guid.ToString(), async (channel, message) => OnMessageHandler(message));
                     
-                    CloseConnectionThread(luck); // this starts thread
+                    CloseConnectionThread(canClose); // this starts thread
                     _subscriber = subscriber;
                     Thread.Sleep(1000); //give some time to establish subscription
                     

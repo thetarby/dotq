@@ -12,6 +12,17 @@ namespace dotq.Storage
     {
         public static string QueueKey = "TaskQueue";
     }
+
+
+    [Serializable]
+    class QueueIsEmptyException : Exception
+    {
+        public QueueIsEmptyException() {}
+
+        public QueueIsEmptyException(string name) {}
+  
+    }
+    
     
     public class RedisTaskQueue : IDotQueue<ITask>
     {
@@ -45,7 +56,7 @@ namespace dotq.Storage
             var deserializer = new DefaultTaskDeserializer();
             var obj = _list.Rpop();
             if (obj.IsNull)
-                throw new Exception("Queue is empty");
+                throw new QueueIsEmptyException();
 
             return deserializer.Deserialize(obj.ToString());
         }

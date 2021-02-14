@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using dotq.Storage.Pooling;
+using dotq.Utils;
 using Newtonsoft.Json;
+using ServiceStack.Messaging;
 using StackExchange.Redis;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -31,70 +33,12 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace dotq.Storage.RedisPromise
 {
-    
     public static class Constants
     {
         // redis key for the hash which keeps promises
         public static string PendingPromises = "pendingPromises";
     }
     
-    
-    // Simple retry logic which can exponentially increase sleeping time after each retry. Usage;
-    // SimpleRetry.ExponentialDo(() =>{ return DoSomethingThatCanThrowException() }, TimeSpan.FromSeconds(0.1));
-    // wait times will be: 0.1 => 0.2 => 0.4 => 0.8
-    public static class SimpleRetry
-    {
-        public static void Do(
-            Action action,
-            TimeSpan retryInterval,
-            int maxAttemptCount = 3)
-        {
-            Do<object>(() =>
-            {
-                action();
-                return null;
-            }, retryInterval, maxAttemptCount);
-        }
-
-        public static void ExponentialDo(
-            Action action,
-            TimeSpan firstRetrySpan,
-            int maxAttemptCount = 5)
-        {
-            for (int i = 0; i < maxAttemptCount; i++)
-            {
-                Do<object>(() =>
-                {
-                    action();
-                    return null;
-                }, Math.Pow(2, i) * firstRetrySpan, 1);   
-            }
-        }
-
-        public static T Do<T>(
-            Func<T> action,
-            TimeSpan retryInterval,
-            int maxAttemptCount = 3)
-        {
-            var exceptions = new List<Exception>();
-
-            for (int attempted = 0; attempted < maxAttemptCount; attempted++)
-            {
-                try
-                {
-                    if (attempted == 0) // in first attempt dont sleep
-                        return action();
-                    else
-                        Thread.Sleep(retryInterval);
-                }
-                catch (Exception ex)
-                {
-                    exceptions.Add(ex);
-                }
-            }
-            throw new AggregateException(exceptions);
-        }
-    }
     
     /// <summary>
     /// Each promise has an internal id, which is _id and a public id accessed via GetPromiseId.
@@ -119,7 +63,7 @@ namespace dotq.Storage.RedisPromise
         public Action OnTimeOut { get; set; } = null;
         
         
-        public void _OnResolveBase()
+        internal void _OnResolveBase()
         {
             OnResolve?.Invoke(Payload);
             var db = _redis.GetDatabase();
@@ -134,7 +78,7 @@ namespace dotq.Storage.RedisPromise
         
         
         // called by retry. Retry passes db instance so that it is not created twice.
-        public void _OnResolveBase(IDatabase redisDb) 
+        internal void _OnResolveBase(IDatabase redisDb) 
         {
             OnResolve?.Invoke(Payload);
             var success = redisDb.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
@@ -143,7 +87,7 @@ namespace dotq.Storage.RedisPromise
         }
         
         
-        public void _OnTimeOutBase()
+        internal void _OnTimeOutBase()
         {
             OnTimeOut?.Invoke();
         }
@@ -285,6 +229,7 @@ namespace dotq.Storage.RedisPromise
         protected int countTime=0;
         protected object mapLock = new object();
         protected Semaphore canContinue = new Semaphore(0, 1);
+        protected Semaphore canClose = new Semaphore(0, 1); // this lock is to prevent closeConnectionThread when there is promise in mapper. If there is no promise in mapper this lock is released and connection is closed 
         
         public RedisPromiseClient(ConnectionMultiplexer  redis)
         {
@@ -303,21 +248,18 @@ namespace dotq.Storage.RedisPromise
         
         // checks if given promise is in mapper of this client. Meaning it is listening to a pubsub channel can ready to be resolved by a promiseResolver server.
         public bool IsPromiseInMapper(Promise p) => _mapper.ContainsKey(p.GetInternalPromiseId());
-        
-        
-        protected virtual Thread CloseConnectionThread(
-            ChannelMessageQueue channelSubscription, 
-            Semaphore luck, 
-            float timeoutInSeconds=-1, 
-            Promise promise=null
-            )
+
+
+        private void CloseConnectionThread(ChannelMessageQueue channelSubscription,
+            Semaphore luck,
+            float timeoutInSeconds = -1,
+            Promise promise = null)
         {
             if (promise == null && timeoutInSeconds != -1)
                 throw new Exception("if timeout is specified a promise should be passed");
             
             Thread thread = new Thread(new ParameterizedThreadStart(CloseConnectionThread));
             thread.Start((object)(channelSubscription,luck, timeoutInSeconds, promise));
-            return thread;
         }
         
         
@@ -352,7 +294,7 @@ namespace dotq.Storage.RedisPromise
          * listens for a resultChannel, which is a redis channel which will publish the result of an action(or task)
          * Immediately returns a promise which will later be resolved with the published message.
          */
-        public virtual Promise Listen(string resultChannel)
+        public Promise Listen(string resultChannel)
         {
             var promiseId = resultChannel;
             
@@ -370,11 +312,10 @@ namespace dotq.Storage.RedisPromise
         public Promise CreatePromise() => new Promise(this, Guid.NewGuid().ToString());
 
 
-        public virtual  Promise Listen(Promise promise)
+        public void Listen(Promise promise)
         {
             _mapper.Add(promise.GetInternalPromiseId(), promise);
             SetupPubSubServer();
-            return promise;
         }
         
         
@@ -387,39 +328,41 @@ namespace dotq.Storage.RedisPromise
             {
                 if (this._channelSubscription == null)
                 {
-                    Semaphore luck = new Semaphore(0,1);
-
                     var channelSubscription = _redis.GetSubscriber().Subscribe(_guid.ToString());
-                    channelSubscription.OnMessage((message =>
-                    {
-                        countTime++;
-                        lock (mapLock)
-                        {
-                            var promiseIdActualMessageDto = JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.Message.ToString());
-                            var promiseId = promiseIdActualMessageDto.PromiseId;
-                            var realmsg = promiseIdActualMessageDto.ActualMessage;
-                            
-                            if (_mapper.ContainsKey(promiseId))
-                            {
-                                var promise = _mapper[promiseId];
-                                _mapper.Remove(promiseId);
-                                promise.Payload = realmsg;
-                                promise._OnResolveBase();
-                                if (_mapper.Count == 0)
-                                {
-                                    luck.Release();
-                                    // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
-                                    canContinue.WaitOne();
-                                } 
-                            }
-                        }
-                    }));
+                    channelSubscription.OnMessage((message) => OnMessageHandler(message.Message));
                     
-                    CloseConnectionThread(channelSubscription, luck); // this starts thread
+                    CloseConnectionThread(channelSubscription, canClose); // this starts thread
                     Thread.Sleep(1000); //give some time to establish subscription
                     
                     _channelSubscription = channelSubscription;
                     return;
+                }
+            }
+        }
+
+
+        protected virtual void OnMessageHandler(RedisValue message)
+        {
+            countTime++;
+            lock (mapLock)
+            {
+                var promiseIdActualMessageDto =
+                    JsonSerializer.Deserialize<PromiseIdActualMessageDto>(message.ToString());
+                var promiseId = promiseIdActualMessageDto.PromiseId;
+                var realmsg = promiseIdActualMessageDto.ActualMessage;
+                            
+                if (_mapper.ContainsKey(promiseId))
+                {
+                    var promise = _mapper[promiseId];
+                    _mapper.Remove(promiseId);
+                    promise.Payload = realmsg;
+                    promise._OnResolveBase();
+                    if (_mapper.Count == 0)
+                    {
+                        canClose.Release();
+                        // to prevent another thread which calls GetPubSubServer to start a subscription while we are closing it, wait until closing thread cleans subscription before releasing mapLock
+                        canContinue.WaitOne();
+                    } 
                 }
             }
         }

@@ -38,7 +38,6 @@ namespace dotq.Task
         {
             _creationTime=DateTime.Now.ToUniversalTime();
             _identifier = this.GetType().Namespace + this.GetType().Name;
-            _instanceIdentifier = Guid.NewGuid().ToString();
             _arguments = arguments;
             var registry = TaskRegistry.TaskRegistry.Instance;
             registry.RegisterTaskIfNotExists(this.GetType());
@@ -102,7 +101,6 @@ namespace dotq.Task
             if (_instanceIdentifier != null)
                 throw new Exception("This task instance have already has an instanceIdentifier. Binding a promise will result in change of it, which is not possible");
             _instanceIdentifier = p.GetPromiseId();
-            
         }
         
         public string SerializeResult()

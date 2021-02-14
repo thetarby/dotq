@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Runtime.Serialization;
+using dotq.Storage.RedisPromise;
 
 namespace dotq.Task
 {
@@ -41,5 +42,7 @@ namespace dotq.Task
         TimeSpan? GetTimeElapsed();
 
         bool IsExecuted();
+
+        void BindPromise(Promise p);
     }
 }

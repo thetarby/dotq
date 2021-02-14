@@ -33,7 +33,7 @@ namespace dotq.TaskResultHandle
         
         
         /// <summary>
-        /// binds task and handle directly and starts to listen which means it should be used after task is enqueued.
+        /// OUTDATED: binds task and handle directly and starts to listen which means it should be used after task is enqueued.
         /// If this is used with a task which is not enqueued then it will use resources for a promise which cannot be resolved.
         /// </summary>
         /// <param name="task"></param>
@@ -42,9 +42,8 @@ namespace dotq.TaskResultHandle
         public PromiseTaskResultHandle(ITask task, ConnectionMultiplexer redis ,Action<object> onResolve=null, bool listenImmediately=false)
         {
             // this ctor binds promise and tasks itself
-            var key = task.GetInstanceIdentifier();
             var promiseClient = RedisPromiseClientFactory.GetInstance(redis);
-            var promise = promiseClient.Listen(key);
+            var promise = promiseClient.CreatePromise();
             promise.OnResolve = onResolve;
             _promise = promise;
             _task = task;
@@ -59,10 +58,12 @@ namespace dotq.TaskResultHandle
         }
 
 
-        public void Listen(ConnectionMultiplexer redis)
+        public void Listen(RedisPromiseClient promiseClient)
         {
-            var promiseClient = RedisPromiseClientFactory.GetInstance(redis);
-            var promise = promiseClient.Listen(_task.GetInstanceIdentifier());
+            var promise = promiseClient.CreatePromise();
+            _task.BindPromise(promise);
+            promiseClient.Listen(promise);
+                
             if (_onResolve != null)
                 promise.OnResolve = _onResolve;
             _promise = promise;
@@ -103,7 +104,10 @@ namespace dotq.TaskResultHandle
             
             return (string)_promise.Payload;
         }
-        
 
+        public void Wait()
+        {
+            _promise.Wait();
+        }
     }
 }

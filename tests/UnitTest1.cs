@@ -29,6 +29,7 @@ namespace TestProject1
         {
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect("localhost");
             var m=new MemoryQueue();
+            RedisPromiseClient promiseClient = new RedisPromiseClient(redis);
             
             int taskCount = 100;
             ITask[] tasks = new ITask[taskCount];
@@ -38,7 +39,7 @@ namespace TestProject1
                 var add=new AddTask(new (i, i+1));
                 tasks[i] = add;
                 var handle = new PromiseTaskResultHandle<int>(add, redis);
-                add.BindPromise(handle.GetPromise());
+                handle.Listen(promiseClient);
                 m.Enqueue(add.Serialize());
                 handles[i] = handle;
             }

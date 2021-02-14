@@ -5,7 +5,7 @@ using dotq.Storage.RedisPromise;
 using dotq.Task;
 using dotq.TaskRegistry;
 using dotq.TaskResultHandle;
-using Microsoft.VisualBasic;
+using dotq.Worker;
 using StackExchange.Redis;
 
 namespace dotq.Api
@@ -18,14 +18,20 @@ namespace dotq.Api
         internal readonly ITaskRegistry _taskRegistry;
         internal readonly RedisPromiseClient _redisPromiseClient;
         internal readonly RedisPromiseServer _redisPromiseServer;
+        
         public DotqApi(ConnectionMultiplexer redis=null)
         {
-            this._redis = redis ?? LocalRedis.Instance;
+            _redis = redis ?? LocalRedis.Instance;
             _taskQueue = new RedisTaskQueue(_redis);
             _resultStore = new SimpleRedisTaskResultStore(_redis);
             _taskRegistry = TaskRegistry.TaskRegistry.Instance;
             _redisPromiseClient = PromiseClientProvider.GetInstance(_redis);
             _redisPromiseServer = PromiseServerProvider.GetInstance();
+        }
+
+        public IWorker CreateWorker()
+        {
+            return new SimpleWorker(_taskQueue, _resultStore);
         }
     }
     
@@ -42,30 +48,25 @@ namespace dotq.Api
         /// <typeparam name="TIn"></typeparam>
         /// <typeparam name="TOut"></typeparam>
         /// <returns></returns>
-        public static ITaskResultHandle<TOut> Delay<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task)
+        public static ITaskResultHandle<TOut> Delay<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task) // this method is written as extension method since I do not want DotqApi to be a generic class. It should be concrete
         {
-            var key = task.GetInstanceIdentifier();
-            var promiseClient = dotqApi._redisPromiseClient;
-            
-            // TODO: there is a potential problem here. Before listening for the promise, handle should be created. Change promise api accordingly
-            var promise = promiseClient.Listen(key);
-            var handle = new PromiseTaskResultHandle<TOut>(task, promise);
-            
+            var handle = new PromiseTaskResultHandle<TOut>(task);
+            handle.Listen(dotqApi._redisPromiseClient);
             dotqApi._taskQueue.Enqueue(task);
             return handle;
         }
         
         
-        public static ITaskResultHandle<TOut> Build<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task, Action<object> onResolve=null)
+        public static PromiseTaskResultHandle<TOut> Build<TIn, TOut>(this DotqApi dotqApi, DotTask<TIn, TOut> task, Action<object> onResolve=null)
         {
             var handle = new PromiseTaskResultHandle<TOut>(task, onResolve);
             return handle;
         }
         
 
-        public static PromiseTaskResultHandle<TOut> DelayHandle<TIn, TOut>(this DotqApi dotqApi, PromiseTaskResultHandle<TOut> handle)
+        public static PromiseTaskResultHandle<TOut> DelayHandle<TOut>(this DotqApi dotqApi, PromiseTaskResultHandle<TOut> handle)
         {
-            handle.Listen(dotqApi._redis);
+            handle.Listen(dotqApi._redisPromiseClient);
             handle.Queue(dotqApi._taskQueue);
             return handle;
         }
@@ -82,6 +83,16 @@ namespace dotq.Api
 
     public static class DotTaskExtensions
     {
+        /// <summary>
+        /// Util method to check if task has a promise waiting for its result.
+        /// TODO: This is ugly and not good refactor is needed.
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        public static bool IsPromise(this ITask task)
+        {
+            return task.GetInstanceIdentifier().Contains(":");
+        }
     }
     
     

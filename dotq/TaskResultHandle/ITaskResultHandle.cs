@@ -20,6 +20,8 @@ namespace dotq.TaskResultHandle
         TResultType GetResult();
 
         string GetStringResult();
-        
+
+        void Wait();
+
     }
 }

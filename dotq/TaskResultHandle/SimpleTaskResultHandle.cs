@@ -46,5 +46,10 @@ namespace dotq.TaskResultHandle
         {
             throw new NotImplementedException();
         }
+
+        public void Wait()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
