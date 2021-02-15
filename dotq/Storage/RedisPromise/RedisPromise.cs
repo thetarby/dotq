@@ -49,7 +49,7 @@ namespace dotq.Storage.RedisPromise
     public class Promise
     {
         private bool _isTimedOut=false;
-        private readonly string _id; // result channel must be unique far all active promises
+        private readonly string _id;
         private readonly ConnectionMultiplexer _redis;
         private readonly RedisPromiseClient _promiseClient;
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(0);
@@ -67,7 +67,7 @@ namespace dotq.Storage.RedisPromise
         {
             OnResolve?.Invoke(Payload);
             var db = _redis.GetDatabase();
-            var success = db.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
+            var success = db.HashDelete(Constants.PendingPromises,GetCompositeKey().ToString());
             _lock.Release();
 
             // TODO: this exception somehow goes silent and prevents background thread to close connection.
@@ -81,7 +81,7 @@ namespace dotq.Storage.RedisPromise
         internal void _OnResolveBase(IDatabase redisDb) 
         {
             OnResolve?.Invoke(Payload);
-            var success = redisDb.HashDelete(Constants.PendingPromises,GetPromiseId().ToString());
+            var success = redisDb.HashDelete(Constants.PendingPromises,GetCompositeKey().ToString());
             //if (success == false)
             //    throw new Exception("Resolved an already resolved promise. Duplicate promise ids maybe?");
         }
@@ -124,9 +124,19 @@ namespace dotq.Storage.RedisPromise
         public bool IsTimedOut() => _isTimedOut;
         
         
+        /// <summary>
+        /// Returns true if promise is connected to a promise client. If it is connected it does not mean that
+        /// it is active and listening to be resolved. To check if promise is waiting to be resolved(registered in
+        /// clients pubsub waiting for a resolver to resolve) call IsListening 
+        /// </summary>
         public bool IsConnected() => _promiseClient!=null;
 
 
+        /// <summary>
+        /// Returns true if promise is connected to a promise client and it is registered in pubsub which means it is
+        /// waiting to be resolved.
+        /// </summary>
+        /// <returns></returns>
         public bool IsListening()
         {
             if (IsConnected())
@@ -138,7 +148,10 @@ namespace dotq.Storage.RedisPromise
         }
 
 
-        public string GetPromiseId()
+        /// <summary>
+        /// returns a combination of promise key and promise client key if promise is connected to a promise client 
+        /// </summary>
+        public string GetCompositeKey()
         {
             // id of a promise is prefixed with related promise client id to be able to find the correct channel
             if (IsConnected())
@@ -149,26 +162,11 @@ namespace dotq.Storage.RedisPromise
             return _id;
         }
 
-
-        public (string, string) ParsePromiseId()
-        {
-            if (!IsConnected())
-                throw new Exception("ParsePromiseId should be called on a connected promise instance");
-            
-            var promiseId = GetPromiseId();
-            var split = promiseId.Split(':');
-
-            if (split.Length != 2)
-                throw new Exception($"Cannot parse promiseId: {promiseId}");
-
-            return (split[0], split[1]);
-        }
-
-
-        public string GetChannelId() => ParsePromiseId().Item1;
         
+        public string GetPromiseKey() => _id; // returns _id which is id of the promise without connected promiseClients' id part.
         
-        public string GetInternalPromiseId() => _id; // returns _id which is id of the promise without connected promiseClients' id part.
+
+        public string GetChannelId() => _promiseClient.GetId().ToString();
         
         
         // this is called by PromiseClient internally if Promise timeouts
@@ -186,7 +184,7 @@ namespace dotq.Storage.RedisPromise
         {
             var db = _redis.GetDatabase();
             var pendingPromises = db.HashGetAll(Constants.PendingPromises).ToDictionary();
-            var key = GetPromiseId();
+            var key = GetCompositeKey();
             
             // for listen2-resolve2 this should always return true hence retry should change when using them
             if (pendingPromises.ContainsKey(key))
@@ -247,7 +245,7 @@ namespace dotq.Storage.RedisPromise
         
         
         // checks if given promise is in mapper of this client. Meaning it is listening to a pubsub channel can ready to be resolved by a promiseResolver server.
-        public bool IsPromiseInMapper(Promise p) => _mapper.ContainsKey(p.GetInternalPromiseId());
+        public bool IsPromiseInMapper(Promise p) => _mapper.ContainsKey(p.GetPromiseKey());
 
 
         private void CloseConnectionThread(ChannelMessageQueue channelSubscription,
@@ -300,8 +298,11 @@ namespace dotq.Storage.RedisPromise
             
             // create a connected promise
             var resultPromise = new Promise(this, promiseId);
-            
-            _mapper.Add(promiseId, resultPromise);
+
+            lock (mapLock)
+            {
+                _mapper.Add(promiseId, resultPromise);   
+            }
 
             SetupPubSubServer();
 
@@ -314,7 +315,24 @@ namespace dotq.Storage.RedisPromise
 
         public void Listen(Promise promise)
         {
-            _mapper.Add(promise.GetInternalPromiseId(), promise);
+            if (promise.IsListening())
+            {
+                throw new PromiseIsAlreadyListeningOnAnotherClientException();
+            }
+
+            if (promise.IsResolved())
+            {
+                throw new PromiseIsAlreadyResolvedException();
+            }
+
+            lock (mapLock)
+            {
+                if (_mapper.ContainsKey(promise.GetPromiseKey()))
+                {
+                    throw new PromiseIsAlreadyInMapperException();
+                }
+                _mapper.Add(promise.GetPromiseKey(), promise);   
+            }
             SetupPubSubServer();
         }
         

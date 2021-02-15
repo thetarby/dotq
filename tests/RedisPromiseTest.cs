@@ -44,7 +44,7 @@ namespace TestProject1
             for (int i = 0; i < promiseCount; i++)
             {
                 //server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString()); // or;
-                server.Resolve(promises[i].GetPromiseId(), i.ToString());
+                server.Resolve(promises[i].GetCompositeKey(), i.ToString());
             }
 
             Thread.Sleep(100);
@@ -79,7 +79,7 @@ namespace TestProject1
                 var promise = proClient.Listen(i.ToString());
                 promise.OnResolve = (payload) =>
                 {
-                    Console.WriteLine($"Promise({promise.GetPromiseId().ToString()}) is resolved. Payload: {payload}");
+                    Console.WriteLine($"Promise({promise.GetCompositeKey().ToString()}) is resolved. Payload: {payload}");
                 };
                 if (promise.Payload != null || promise.IsResolved() == true)
                     throw new Exception();
@@ -91,7 +91,7 @@ namespace TestProject1
             for (int i = 0; i < promiseCount; i++)
             {
                 //server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString()); // or;
-                server.Resolve(promises[i].GetPromiseId(), i.ToString());
+                server.Resolve(promises[i].GetCompositeKey(), i.ToString());
             }
 
             Thread.Sleep(100);
@@ -149,7 +149,7 @@ namespace TestProject1
                     var xas = 1;
                 }
                 
-                server.Resolve(promise.GetPromiseId(), i.ToString());
+                server.Resolve(promise.GetCompositeKey(), i.ToString());
             }
             
             Console.WriteLine("Stress test is successful");

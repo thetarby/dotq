@@ -29,7 +29,7 @@ namespace test
 
 
             var server = new RedisPromiseServer(redis);
-            server.Resolve(promise.GetPromiseId(), "42");
+            server.Resolve(promise.GetCompositeKey(), "42");
             for (int i = 0; i < 10; i++)
             {
                 Thread.Sleep(50);
@@ -55,7 +55,7 @@ namespace test
 
 
             var server = new RedisPromiseServer(redis);
-            server.ResolveWithoutPublishing(promise.GetPromiseId().ToString(), "42");
+            server.ResolveWithoutPublishing(promise.GetCompositeKey().ToString(), "42");
 
             Thread.Sleep(100);
 
@@ -90,7 +90,7 @@ namespace test
                 var promise = proClient.Listen(i.ToString());
                 promise.OnResolve = (payload) =>
                 {
-                    Console.WriteLine($"Promise({promise.GetPromiseId().ToString()}) is resolved. Payload: {payload}");
+                    Console.WriteLine($"Promise({promise.GetCompositeKey().ToString()}) is resolved. Payload: {payload}");
                 };
                 if (promise.Payload != null || promise.IsResolved() == true)
                     throw new Exception();
@@ -102,7 +102,7 @@ namespace test
             for (int i = 0; i < promiseCount; i++)
             {
                 //server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString()); // or;
-                server.Resolve(promises[i].GetPromiseId(), i.ToString());
+                server.Resolve(promises[i].GetCompositeKey(), i.ToString());
             }
 
             Thread.Sleep(100);
@@ -135,7 +135,7 @@ namespace test
                 var promise = proClient.Listen(i.ToString());
                 promise.OnResolve = (payload) =>
                 {
-                    Console.WriteLine($"Promise({promise.GetPromiseId().ToString()}) is resolved. Payload: {payload}");
+                    Console.WriteLine($"Promise({promise.GetCompositeKey().ToString()}) is resolved. Payload: {payload}");
                 };
                 if (promise.Payload != null || promise.IsResolved() == true)
                     throw new Exception();
@@ -147,7 +147,7 @@ namespace test
             for (int i = 0; i < promiseCount; i++)
             {
                 //server.Resolve(new PromiseIdChannelIdDto(){ChannelId = clientguid, PromiseId = i.ToString()}, i.ToString()); // or;
-                server.Resolve(promises[i].GetPromiseId(), i.ToString());
+                server.Resolve(promises[i].GetCompositeKey(), i.ToString());
             }
 
             Thread.Sleep(100);

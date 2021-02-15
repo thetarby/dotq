@@ -86,7 +86,8 @@ namespace dotq.Task
         // NOTE: this should give the same result when a task is serialized and then deserialized.
         public string GetInstanceIdentifier()
         {
-            if (_instanceIdentifier != null) return _instanceIdentifier;
+            if (_instanceIdentifier != null) 
+                return _instanceIdentifier;
             Console.WriteLine("instance identifier is not set");
             return null;
         }
@@ -100,7 +101,7 @@ namespace dotq.Task
         {
             if (_instanceIdentifier != null)
                 throw new Exception("This task instance have already has an instanceIdentifier. Binding a promise will result in change of it, which is not possible");
-            _instanceIdentifier = p.GetPromiseId();
+            _instanceIdentifier = p.GetCompositeKey();
         }
         
         public string SerializeResult()
