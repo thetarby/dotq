@@ -178,17 +178,32 @@ namespace dotq.Task
             return (_status == TaskStatus.Executed);
         }
 
+        /// <summary>
+        /// If a task is not bound to a promise its instanceId would be null and cannot be serialized. But a task does
+        /// not have to have a promise. This method is called to assign a unique id to task when it is serialized
+        /// if it is not bound to a promise already. 
+        /// </summary>
+        private string AssignUniqueId()
+        {
+            if (_instanceIdentifier != null)
+            {
+                throw new Exception("Instance Identifier should be null to call this method");
+            }
+
+            _instanceIdentifier = Guid.NewGuid().ToString();
+            return _instanceIdentifier;
+        }
+        
         public TaskModel<TInput> ToModel()
         {
             return new TaskModel<TInput>
             {
                 TaskIdentifier = GetIdentifier(),
-                TaskInstanceIdentifier = GetInstanceIdentifier(),
+                TaskInstanceIdentifier = GetInstanceIdentifier() ?? AssignUniqueId(),
                 Args = _arguments,
                 CreationTime = _creationTime,
                 Options = new Dictionary<string, string>() //TODO: empty for now
             };
         }
-        
     }
 }
